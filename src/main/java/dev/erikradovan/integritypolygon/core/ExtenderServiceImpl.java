@@ -292,6 +292,8 @@ public class ExtenderServiceImpl implements ExtenderService {
         Map<String, Object> state = serverStates.computeIfAbsent(extenderId, k -> new LinkedHashMap<>());
         state.put("server", serverLabel);
         state.put("extender_id", extenderId);
+        state.put("server_ip", payload.has("server_ip") ? payload.get("server_ip").getAsString() : "");
+        state.put("server_port", payload.has("server_port") ? payload.get("server_port").getAsInt() : 0);
         state.put("version", payload.has("version") ? payload.get("version").getAsString() : "?");
         state.put("mc_version", payload.has("mc_version") ? payload.get("mc_version").getAsString() : "?");
         state.put("players", payload.has("players") ? payload.get("players").getAsInt() : 0);
@@ -308,6 +310,8 @@ public class ExtenderServiceImpl implements ExtenderService {
         Map<String, Object> state = serverStates.computeIfAbsent(extenderId, k -> new LinkedHashMap<>());
         state.put("server", serverLabel);
         state.put("extender_id", extenderId);
+        state.put("server_ip", payload.has("server_ip") ? payload.get("server_ip").getAsString() : "");
+        state.put("server_port", payload.has("server_port") ? payload.get("server_port").getAsInt() : 0);
         state.put("version", payload.has("version") ? payload.get("version").getAsString() : "?");
         state.put("enrolled", true);
         state.put("last_heartbeat", System.currentTimeMillis());

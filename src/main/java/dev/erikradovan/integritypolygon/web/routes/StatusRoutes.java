@@ -65,6 +65,7 @@ public class StatusRoutes {
                     // Merge extender data if available
                     // State map is keyed by extender hash; look for one whose "server" label matches
                     Map<String, Object> ext = null;
+                    String serverHost = normalizeHost(server.getServerInfo().getAddress().getHostString());
                     for (Map.Entry<String, Map<String, Object>> entry : extenderStates.entrySet()) {
                         String label = String.valueOf(entry.getValue().getOrDefault("server", ""));
                         if (name.equalsIgnoreCase(label)) {
@@ -72,6 +73,18 @@ public class StatusRoutes {
                             break;
                         }
                     }
+
+                    // Fallback: match by backend IP when labels differ.
+                    if (ext == null && serverHost != null && !serverHost.isBlank()) {
+                        for (Map.Entry<String, Map<String, Object>> entry : extenderStates.entrySet()) {
+                            String extIp = normalizeHost(String.valueOf(entry.getValue().getOrDefault("server_ip", "")));
+                            if (extIp != null && !extIp.isBlank() && serverHost.equalsIgnoreCase(extIp)) {
+                                ext = entry.getValue();
+                                break;
+                            }
+                        }
+                    }
+
                     if (ext != null) {
                         long lastHeartbeat = toLong(ext.getOrDefault("last_heartbeat", 0L));
                         boolean fresh = lastHeartbeat > 0L && (System.currentTimeMillis() - lastHeartbeat) <= HEARTBEAT_STALE_MS;
@@ -147,6 +160,17 @@ public class StatusRoutes {
         } catch (Exception ignored) {
             return 0L;
         }
+    }
+
+    private String normalizeHost(String value) {
+        if (value == null) return "";
+        String host = value.trim();
+        if (host.startsWith("/")) host = host.substring(1);
+        int slash = host.indexOf('/');
+        if (slash >= 0) host = host.substring(0, slash);
+        int colon = host.indexOf(':');
+        if (colon >= 0) host = host.substring(0, colon);
+        return host;
     }
 }
 

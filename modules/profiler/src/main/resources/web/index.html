@@ -47,7 +47,13 @@
     <div id="app"><div class="no-data">Loading profiling data…</div></div>
 
     <script>
-        const BASE = window.IP_MODULE_API_BASE || '';
+        const MODULE_ID = (() => {
+            const parts = location.pathname.split('/').filter(Boolean);
+            // /modules/{id}/...
+            if (parts.length >= 2 && parts[0] === 'modules') return parts[1];
+            return null;
+        })();
+        const BASE = window.IP_MODULE_API_BASE || (MODULE_ID ? `/api/modules/${MODULE_ID}/` : '/api/modules/profiler/');
         const TOKEN = new URLSearchParams(location.search).get('token') || '';
         let currentServer = null;
         const flameState = { server: null, updatedAt: 0, tree: null, zoomPath: [] };

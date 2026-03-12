@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -612,6 +613,8 @@ public class ExtenderPlugin extends JavaPlugin implements Listener {
         JsonObject payload = new JsonObject();
         payload.addProperty("version", getDescription().getVersion());
         payload.addProperty("mc_version", getServer().getVersion());
+        payload.addProperty("server_ip", resolveServerIp());
+        payload.addProperty("server_port", getServer().getPort());
         payload.addProperty("players", getServer().getOnlinePlayers().size());
         payload.addProperty("max_players", getServer().getMaxPlayers());
         payload.addProperty("tps", avgTps);
@@ -627,6 +630,28 @@ public class ExtenderPlugin extends JavaPlugin implements Listener {
         envelope.addProperty("server_label", serverLabel);
         envelope.add("payload", payload);
         return envelope;
+    }
+
+    private String resolveServerIp() {
+        try {
+            String configured = getServer().getIp();
+            if (configured != null && !configured.isBlank()) {
+                return configured;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            if (proxySocket != null && proxySocket.getLocalAddress() != null) {
+                return proxySocket.getLocalAddress().getHostAddress();
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            InetAddress local = InetAddress.getLocalHost();
+            return local.getHostAddress();
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
