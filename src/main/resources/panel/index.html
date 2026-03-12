@@ -1345,6 +1345,11 @@ async function _refreshExtenders() {
   try {
     const status = await api('/api/status');
     const servers = status.servers || [];
+    let extenders = [];
+    try {
+      const extResp = await api('/api/extenders');
+      extenders = extResp.servers || [];
+    } catch (ignored) {}
 
     // Render connection info only once
     if (!_extendersInitialized) {
@@ -1366,7 +1371,7 @@ async function _refreshExtenders() {
 
     // Build or update server cards
     if (!_extendersInitialized) {
-      _renderExtenderCards(servers);
+      _renderExtenderCards(servers, extenders);
       _extendersInitialized = true;
     } else {
       _updateExtenderCards(servers);
@@ -1378,8 +1383,8 @@ async function _refreshExtenders() {
   }
 }
 
-function _renderExtenderCards(servers) {
-  const anyEnrolled = servers.some(s => s.extender_enrolled);
+function _renderExtenderCards(servers, extenders) {
+  const anyEnrolled = servers.some(s => s.extender_enrolled) || (extenders && extenders.length > 0);
   let html = '';
   if (!anyEnrolled) {
     html += `<div class="card slide-up" style="border-color:var(--amber);margin-bottom:16px">
@@ -1393,6 +1398,15 @@ function _renderExtenderCards(servers) {
             Some modules require the IntegrityPolygon Extender on backend Paper servers.
           </div>
         </div>
+      </div>
+    </div>`;
+  } else if (servers.length && !servers.some(s => s.extender_enrolled) && extenders && extenders.length) {
+    const labels = extenders.map(e => esc(e.server || e.extender_id || '?')).join(', ');
+    html += `<div class="card slide-up" style="border-color:var(--blue);margin-bottom:16px">
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:var(--blue)">Extender Connected (Unmapped)</div>
+      <div style="color:var(--text-dim);font-size:12px;line-height:1.6">
+        Connected extender labels: ${labels}.<br>
+        Set each Paper extender <code>server-label</code> to match the Velocity server name.
       </div>
     </div>`;
   }

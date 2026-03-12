@@ -48,11 +48,16 @@
 
     <script>
         const BASE = window.IP_MODULE_API_BASE || '';
+        const TOKEN = new URLSearchParams(location.search).get('token') || '';
         let currentServer = null;
         const flameState = { server: null, updatedAt: 0, tree: null, zoomPath: [] };
 
+        function authHeaders() {
+            return TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {};
+        }
+
         async function fetchJson(path) {
-            const r = await fetch(BASE + path, { credentials: 'include' });
+            const r = await fetch(BASE + path, { credentials: 'include', headers: authHeaders() });
             if (!r.ok) throw new Error(r.statusText);
             return r.json();
         }
@@ -217,14 +222,22 @@
 
         async function requestFlame() {
             try {
-                await fetch(BASE + 'request-flame/' + encodeURIComponent(currentServer), { method: 'POST', credentials: 'include' });
+                await fetch(BASE + 'request-flame/' + encodeURIComponent(currentServer), {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: authHeaders()
+                });
                 alert('Flame graph generation requested. Refresh in a few seconds.');
             } catch (e) { alert('Error: ' + e.message); }
         }
 
         async function extendServer(name) {
             try {
-                const res = await fetch(BASE + 'extend/' + encodeURIComponent(name), { method: 'POST', credentials: 'include' });
+                const res = await fetch(BASE + 'extend/' + encodeURIComponent(name), {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: authHeaders()
+                });
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}));
                     throw new Error(body.error || res.statusText);
