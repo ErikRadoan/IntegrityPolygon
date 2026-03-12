@@ -1,0 +1,395 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profiler — IntegrityPolygon</title>
+    <style>
+        :root { --bg: #0f1117; --card: #1a1d26; --border: #2a2d3a; --text: #e4e4e7; --muted: #888; --accent: #3b82f6; --green: #22c55e; --yellow: #eab308; --red: #ef4444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; background: var(--bg); color: var(--text); padding: 20px; }
+        h1 { font-size: 1.5em; margin-bottom: 16px; }
+        h2 { font-size: 1.1em; margin-bottom: 12px; color: var(--accent); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+        .stat { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+        .stat:last-child { border: none; }
+        .stat-label { color: var(--muted); }
+        .stat-value { font-weight: bold; font-variant-numeric: tabular-nums; }
+        .good { color: var(--green); } .warn { color: var(--yellow); } .bad { color: var(--red); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85em; text-transform: uppercase; }
+        .bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s; }
+        .no-data { color: var(--muted); padding: 40px; text-align: center; }
+        .server-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .server-tab { padding: 8px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+        .server-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .server-tab:hover { border-color: var(--accent); }
+        .btn { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; text-decoration: none; display: inline-block; }
+        .btn:hover { opacity: 0.9; }
+        .btn.secondary { background: #374151; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .flame-wrap { position: relative; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #0b0d14; }
+        #flameCanvas { width: 100%; display: block; cursor: pointer; }
+        .flame-tip {
+            position: absolute; display: none; pointer-events: none; z-index: 20;
+            background: rgba(8, 10, 18, 0.96); border: 1px solid var(--border); border-radius: 6px;
+            padding: 6px 8px; font-size: 12px; white-space: nowrap; color: var(--text);
+        }
+        .flame-hint { color: var(--muted); font-size: 12px; margin: 6px 0 10px; }
+        .flame-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Profiler</h1>
+    <div id="app"><div class="no-data">Loading profiling data…</div></div>
+
+    <script>
+        const BASE = window.IP_MODULE_API_BASE || '';
+        let currentServer = null;
+        const flameState = { server: null, updatedAt: 0, tree: null, zoomPath: [] };
+
+        async function fetchJson(path) {
+            const r = await fetch(BASE + path, { credentials: 'include' });
+            if (!r.ok) throw new Error(r.statusText);
+            return r.json();
+        }
+
+        function tpsClass(v) { return v >= 19.5 ? 'good' : v >= 17 ? 'warn' : 'bad'; }
+        function cpuClass(v) { return v < 50 ? 'good' : v < 80 ? 'warn' : 'bad'; }
+        function msptClass(v) { return v < 40 ? 'good' : v < 50 ? 'warn' : 'bad'; }
+
+        async function render() {
+            try {
+                const { servers } = await fetchJson('servers');
+                if (!servers || servers.length === 0) {
+                    document.getElementById('app').innerHTML = '<div class="no-data">No backend servers reporting yet. Make sure the Extender is running.</div>';
+                    return;
+                }
+                if (!currentServer || !servers.find(s => s.name === currentServer)) {
+                    currentServer = servers[0].name;
+                }
+
+                let html = '<div class="server-tabs">';
+                for (const s of servers) {
+                    html += `<div class="server-tab ${s.name === currentServer ? 'active' : ''}" onclick="selectServer('${s.name}')">${s.name}</div>`;
+                }
+                html += '</div>';
+
+                const detail = await fetchJson('server/' + encodeURIComponent(currentServer));
+                html += renderDetail(detail);
+                document.getElementById('app').innerHTML = html;
+                await renderFlameGraph(detail);
+            } catch (e) {
+                document.getElementById('app').innerHTML = `<div class="no-data">Error: ${e.message}</div>`;
+            }
+        }
+
+        function renderDetail(d) {
+            let html = '<div class="grid">';
+            // TPS card
+            html += `<div class="card"><h2>TPS</h2>
+                <div class="stat"><span class="stat-label">10s</span><span class="stat-value ${tpsClass(d.tps_10s)}">${d.tps_10s}</span></div>
+                <div class="stat"><span class="stat-label">1m</span><span class="stat-value ${tpsClass(d.tps_1m)}">${d.tps_1m}</span></div>
+                <div class="stat"><span class="stat-label">5m</span><span class="stat-value ${tpsClass(d.tps_5m)}">${d.tps_5m}</span></div>
+            </div>`;
+
+            // MSPT card
+            html += `<div class="card"><h2>MSPT (ms/tick)</h2>
+                <div class="stat"><span class="stat-label">Mean</span><span class="stat-value ${msptClass(d.mspt_mean)}">${d.mspt_mean}</span></div>
+                <div class="stat"><span class="stat-label">Min</span><span class="stat-value">${d.mspt_min}</span></div>
+                <div class="stat"><span class="stat-label">Max</span><span class="stat-value ${msptClass(d.mspt_max)}">${d.mspt_max}</span></div>
+                <div class="stat"><span class="stat-label">P95</span><span class="stat-value ${msptClass(d.mspt_p95)}">${d.mspt_p95}</span></div>
+            </div>`;
+
+            // CPU card
+            html += `<div class="card"><h2>CPU</h2>
+                <div class="stat"><span class="stat-label">System</span><span class="stat-value ${cpuClass(d.system_cpu)}">${d.system_cpu}%</span></div>
+                <div class="stat"><span class="stat-label">JVM Process</span><span class="stat-value ${cpuClass(d.process_cpu)}">${d.process_cpu}%</span></div>
+            </div>`;
+
+            // Memory card
+            const memPct = d.heap_max_mb > 0 ? Math.round(d.heap_used_mb / d.heap_max_mb * 100) : 0;
+            html += `<div class="card"><h2>Memory</h2>
+                <div class="stat"><span class="stat-label">Heap</span><span class="stat-value">${d.heap_used_mb} / ${d.heap_max_mb} MB</span></div>
+                <div class="bar"><div class="bar-fill" style="width:${memPct}%"></div></div>
+                <div class="stat" style="margin-top:8px"><span class="stat-label">GC Collections</span><span class="stat-value">${d.gc_collections || 0}</span></div>
+                <div class="stat"><span class="stat-label">GC Time</span><span class="stat-value">${d.gc_time_ms || 0} ms</span></div>
+                <div class="stat"><span class="stat-label">GC / min</span><span class="stat-value">${d.gc_frequency_per_min || 0}</span></div>
+                <div class="stat"><span class="stat-label">Avg GC Pause</span><span class="stat-value">${d.gc_avg_pause_ms || 0} ms</span></div>
+            </div>`;
+
+            // Sampler card
+            html += `<div class="card"><h2>Sampler</h2>
+                <div class="stat"><span class="stat-label">Sample interval</span><span class="stat-value">${d.sample_interval_ms || 0} ms</span></div>
+                <div class="stat"><span class="stat-label">Report interval</span><span class="stat-value">${d.report_interval_sec || 0} s</span></div>
+                <div class="stat"><span class="stat-label">Window samples</span><span class="stat-value">${d.total_samples || 0}</span></div>
+                <div class="stat"><span class="stat-label">Cumulative samples</span><span class="stat-value">${d.cumulative_samples || 0}</span></div>
+            </div>`;
+            html += '</div>';
+
+            // Per-plugin CPU
+            if (d.plugin_cpu && Object.keys(d.plugin_cpu).length > 0) {
+                html += '<div class="card" style="margin-bottom:16px"><h2>Per-Plugin CPU Usage</h2><table><tr><th>Plugin</th><th>CPU %</th><th></th></tr>';
+                const sorted = Object.entries(d.plugin_cpu).sort((a,b) => b[1] - a[1]);
+                for (const [name, pct] of sorted) {
+                    html += `<tr><td>${name}</td><td>${pct}%</td><td><div class="bar"><div class="bar-fill" style="width:${Math.min(pct, 100)}%"></div></div></td></tr>`;
+                }
+                html += '</table></div>';
+            }
+
+            // Top methods
+            if (d.top_methods && d.top_methods.length > 0) {
+                html += '<div class="card" style="margin-bottom:16px"><h2>Top Sampled Methods (' + (d.total_samples || 0) + ' samples / ' + (d.cumulative_samples || 0) + ' total)</h2>';
+                html += '<table><tr><th>Method</th><th>Plugin</th><th>Samples</th><th>%</th></tr>';
+                for (const m of d.top_methods) {
+                    const shortMethod = m.method.length > 60 ? '…' + m.method.slice(-57) : m.method;
+                    html += `<tr><td title="${m.method}" style="font-family:monospace;font-size:0.85em">${shortMethod}</td><td>${m.plugin}</td><td>${m.samples}</td><td>${m.percent}%</td></tr>`;
+                }
+                html += '</table></div>';
+            }
+
+            if (d.gc_collectors && d.gc_collectors.length > 0) {
+                html += '<div class="card" style="margin-bottom:16px"><h2>GC Collectors</h2><table><tr><th>Name</th><th>Total</th><th>Time</th><th>/ min</th><th>Avg Pause</th></tr>';
+                for (const gc of d.gc_collectors) {
+                    html += `<tr><td>${gc.name}</td><td>${gc.collections}</td><td>${gc.collection_time_ms} ms</td><td>${gc.frequency_per_min}</td><td>${gc.avg_pause_ms} ms</td></tr>`;
+                }
+                html += '</table></div>';
+            }
+
+            // Flame graph button
+            html += '<div class="actions">';
+            html += '<button class="btn" onclick="requestFlame()">🔥 Generate Flame Graph</button>';
+            html += '<button class="btn secondary" onclick="resetFlameZoom()">Reset Flame Zoom</button>';
+            if (d.flame_graph_available) {
+                html += `<a class="btn secondary" href="${BASE}server/${encodeURIComponent(currentServer)}/flamegraph" target="_blank" rel="noopener">View Raw Flame JSON</a>`;
+            }
+            html += '</div>';
+
+            html += `<div class="card" id="flameCard" style="margin-bottom:16px">
+                <h2>Flame Graph</h2>
+                <div class="flame-hint">Click a frame to zoom in. Hover to inspect stack weight.</div>
+                <div class="flame-wrap">
+                    <canvas id="flameCanvas" height="260"></canvas>
+                    <div class="flame-tip" id="flameTip"></div>
+                </div>
+                <div class="flame-meta" id="flameMeta">No flame graph loaded yet.</div>
+            </div>`;
+
+            return html;
+        }
+
+        function selectServer(name) { currentServer = name; render(); }
+
+        async function requestFlame() {
+            try {
+                await fetch(BASE + 'request-flame/' + encodeURIComponent(currentServer), { method: 'POST', credentials: 'include' });
+                alert('Flame graph generation requested. Refresh in a few seconds.');
+            } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        function resetFlameZoom() {
+            flameState.zoomPath = [];
+            redrawFlame();
+        }
+
+        async function renderFlameGraph(detail) {
+            const meta = document.getElementById('flameMeta');
+            if (!meta) return;
+
+            if (!detail.flame_graph_available) {
+                flameState.tree = null;
+                meta.textContent = 'No flame graph available for this server yet. Generate one first.';
+                drawPlaceholder('No flame data');
+                return;
+            }
+
+            const update = detail.last_flame_graph_update || 0;
+            if (flameState.server === currentServer && flameState.updatedAt === update && flameState.tree) {
+                redrawFlame();
+                return;
+            }
+
+            try {
+                const flame = await fetchJson('server/' + encodeURIComponent(currentServer) + '/flamegraph');
+                const stacks = flame.stacks || [];
+                flameState.tree = buildFlameTree(stacks);
+                flameState.server = currentServer;
+                flameState.updatedAt = update;
+                flameState.zoomPath = [];
+                redrawFlame();
+            } catch (e) {
+                flameState.tree = null;
+                meta.textContent = 'Failed to load flame graph data: ' + e.message;
+                drawPlaceholder('Failed to load flame data');
+            }
+        }
+
+        function buildFlameTree(stacks) {
+            const root = { name: '(root)', value: 0, children: new Map() };
+            for (const entry of stacks) {
+                const stack = (entry.stack || '').split(';').filter(Boolean);
+                const count = Number(entry.count || 0);
+                if (!stack.length || count <= 0) continue;
+                root.value += count;
+
+                let node = root;
+                for (const frame of stack) {
+                    if (!node.children.has(frame)) {
+                        node.children.set(frame, { name: frame, value: 0, children: new Map() });
+                    }
+                    node = node.children.get(frame);
+                    node.value += count;
+                }
+            }
+            return root;
+        }
+
+        function redrawFlame() {
+            if (!flameState.tree) {
+                drawPlaceholder('No flame data');
+                return;
+            }
+
+            const canvas = document.getElementById('flameCanvas');
+            const meta = document.getElementById('flameMeta');
+            const tip = document.getElementById('flameTip');
+            if (!canvas || !meta || !tip) return;
+
+            const view = findNodeByPath(flameState.tree, flameState.zoomPath) || flameState.tree;
+            meta.textContent = `Server: ${currentServer} | Total samples: ${view.value} | Zoom: ${flameState.zoomPath.length ? flameState.zoomPath.join(' > ') : '(root)'}`;
+
+            const flat = [];
+            const levels = [];
+            flatten(view, 0, levels);
+            const depth = Math.max(1, levels.length);
+            const rowH = 20;
+            const h = Math.max(220, depth * rowH + 8);
+
+            const wCss = canvas.parentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.max(1, Math.floor(wCss * dpr));
+            canvas.height = Math.max(1, Math.floor(h * dpr));
+            canvas.style.height = h + 'px';
+
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, wCss, h);
+
+            drawNodes(ctx, view, 0, 0, wCss, rowH, flat, flameState.zoomPath);
+
+            canvas.onmousemove = (ev) => {
+                const r = canvas.getBoundingClientRect();
+                const x = ev.clientX - r.left;
+                const y = ev.clientY - r.top;
+                const hit = flat.find(n => x >= n.x && x <= n.x + n.w && y >= n.y && y <= n.y + n.h);
+                if (!hit) {
+                    tip.style.display = 'none';
+                    return;
+                }
+                const pct = view.value > 0 ? ((hit.value * 100) / view.value).toFixed(2) : '0.00';
+                tip.style.display = 'block';
+                tip.style.left = Math.min(wCss - 250, x + 12) + 'px';
+                tip.style.top = Math.max(8, y - 38) + 'px';
+                tip.innerHTML = `<b>${escapeHtml(hit.name)}</b><br>${hit.value} samples (${pct}%)`;
+            };
+
+            canvas.onmouseleave = () => { tip.style.display = 'none'; };
+            canvas.onclick = (ev) => {
+                const r = canvas.getBoundingClientRect();
+                const x = ev.clientX - r.left;
+                const y = ev.clientY - r.top;
+                const hit = flat.find(n => x >= n.x && x <= n.x + n.w && y >= n.y && y <= n.y + n.h);
+                if (!hit) return;
+                flameState.zoomPath = hit.path;
+                redrawFlame();
+            };
+        }
+
+        function drawNodes(ctx, node, depth, x, width, rowH, out, path) {
+            if (!node.children || node.children.size === 0) return;
+            const y = depth * rowH;
+            let curX = x;
+
+            const children = Array.from(node.children.values()).sort((a, b) => b.value - a.value);
+            for (const child of children) {
+                const w = node.value > 0 ? (child.value / node.value) * width : 0;
+                if (w <= 0.8) {
+                    curX += w;
+                    continue;
+                }
+                const hue = hashHue(child.name);
+                ctx.fillStyle = `hsl(${hue} 70% 50%)`;
+                ctx.fillRect(curX, y, w, rowH - 1);
+                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                ctx.strokeRect(curX + 0.5, y + 0.5, Math.max(0, w - 1), rowH - 2);
+
+                if (w > 70) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '11px monospace';
+                    const label = child.name.length > 46 ? '...' + child.name.slice(-43) : child.name;
+                    ctx.fillText(label, curX + 4, y + 13);
+                }
+
+                const childPath = path.concat(child.name);
+                out.push({ x: curX, y, w, h: rowH - 1, name: child.name, value: child.value, path: childPath });
+                drawNodes(ctx, child, depth + 1, curX, w, rowH, out, childPath);
+                curX += w;
+            }
+        }
+
+        function flatten(node, depth, levels) {
+            if (!node.children || node.children.size === 0) return;
+            levels[depth] = true;
+            for (const child of node.children.values()) flatten(child, depth + 1, levels);
+        }
+
+        function findNodeByPath(root, path) {
+            let node = root;
+            for (const part of path) {
+                if (!node.children || !node.children.has(part)) return null;
+                node = node.children.get(part);
+            }
+            return node;
+        }
+
+        function drawPlaceholder(text) {
+            const canvas = document.getElementById('flameCanvas');
+            if (!canvas) return;
+            const w = canvas.parentElement.clientWidth;
+            const h = 260;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.max(1, Math.floor(w * dpr));
+            canvas.height = Math.max(1, Math.floor(h * dpr));
+            canvas.style.height = h + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#7d8396';
+            ctx.font = '13px monospace';
+            ctx.fillText(text, 12, 24);
+        }
+
+        function hashHue(value) {
+            let h = 0;
+            for (let i = 0; i < value.length; i++) h = ((h << 5) - h) + value.charCodeAt(i);
+            return Math.abs(h) % 360;
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        render();
+        setInterval(render, 10000);
+    </script>
+</body>
+</html>
+
