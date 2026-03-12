@@ -19,9 +19,9 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Profiler Module — deep JVM profiling for Paper backend servers.
@@ -60,7 +60,8 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private volatile int sampleIntervalMs = 1;
     private volatile boolean enabled = true;
 
-    private final AtomicBoolean extenderDeployed = new AtomicBoolean(false);
+    private volatile byte[] bundledExtenderJar;
+    private final Set<String> extendedExtenders = ConcurrentHashMap.newKeySet();
 
     @Override
     public void onEnable(ModuleContext ctx) {
@@ -74,8 +75,11 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
 
         loadConfig();
 
-        // Deploy the extender module
-        deployExtenderModule();
+        // Load bundled extender JAR for on-demand per-server deployment.
+        bundledExtenderJar = loadBundledExtenderJar();
+        if (bundledExtenderJar == null || bundledExtenderJar.length == 0) {
+            logger.warn("profiler-extender.jar not found in resources — manual extension will be unavailable");
+        }
 
         // Register handlers for incoming profiling data
         if (extenderService != null) {
@@ -94,10 +98,11 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     public void onDisable() {
         if (extenderService != null) {
             extenderService.removeAllHandlers("profiler");
-            if (extenderDeployed.get()) {
-                extenderService.undeployExtenderModule("profiler");
+            for (String extenderId : new ArrayList<>(extendedExtenders)) {
+                sendUndeployToExtender(extenderId);
             }
         }
+        extendedExtenders.clear();
         log("INFO", "LIFECYCLE", "Profiler disabled");
     }
 
@@ -114,33 +119,6 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     // ── Extender Module Deployment ──────────────────────────────
-
-    private void deployExtenderModule() {
-        if (extenderService == null) {
-            logger.warn("ExtenderService unavailable — cannot deploy profiler extender module");
-            return;
-        }
-
-        try {
-            // Read the bundled extender JAR from our own resources
-            byte[] jarBytes = loadBundledExtenderJar();
-            if (jarBytes == null || jarBytes.length == 0) {
-                logger.warn("profiler-extender.jar not found in resources — " +
-                        "profiling will not be available on backend servers");
-                return;
-            }
-
-            String version = context.getDescriptor().version();
-            extenderService.deployExtenderModule("profiler", jarBytes, version);
-            extenderDeployed.set(true);
-            logger.info("Deployed profiler extender module ({} bytes) to all backend servers", jarBytes.length);
-            log("INFO", "DEPLOY", "Deployed profiler-extender.jar (" + jarBytes.length + " bytes)");
-
-        } catch (Exception e) {
-            logger.error("Failed to deploy profiler extender module: {}", e.getMessage());
-            log("ERROR", "DEPLOY", "Failed to deploy: " + e.getMessage());
-        }
-    }
 
     private byte[] loadBundledExtenderJar() {
         // The JAR should be bundled at /profiler-extender.jar in this module's resources
@@ -192,8 +170,28 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private void handleProfilerReady(ExtenderMessage msg) {
+        extendedExtenders.add(msg.source());
         log("INFO", "EXTENDER", "Profiler extender ready on " + msg.serverLabel());
         sendConfigToExtender(msg.source());
+    }
+
+    private void sendDeployToExtender(String extenderId) {
+        if (extenderService == null || extenderId == null || extenderId.isBlank()) return;
+        if (bundledExtenderJar == null || bundledExtenderJar.length == 0) return;
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty("module_id", "profiler");
+        payload.addProperty("jar_data", Base64.getEncoder().encodeToString(bundledExtenderJar));
+        payload.addProperty("version", context.getDescriptor().version());
+        extenderService.sendMessage("system", extenderId, "deploy_module", payload);
+        extendedExtenders.add(extenderId);
+    }
+
+    private void sendUndeployToExtender(String extenderId) {
+        if (extenderService == null || extenderId == null || extenderId.isBlank()) return;
+        JsonObject payload = new JsonObject();
+        payload.addProperty("module_id", "profiler");
+        extenderService.sendMessage("system", extenderId, "undeploy_module", payload);
     }
 
     // ── Incoming Data Handlers ──────────────────────────────────
@@ -307,11 +305,13 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private void registerDashboard() {
         ModuleDashboard d = context.getDashboard();
         d.get("status", this::apiStatus);
+        d.get("targets", this::apiTargets);
         d.get("servers", this::apiServers);
         d.get("server/{name}", this::apiServerDetail);
         d.get("server/{name}/flamegraph", this::apiFlameGraph);
         d.get("config", this::apiGetConfig);
         d.post("config", this::apiSaveConfig);
+        d.post("extend/{name}", this::apiExtendServer);
         d.post("request-flame/{name}", this::apiRequestFlame);
     }
 
@@ -321,9 +321,36 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         s.put("server_count", serverProfiles.size());
         s.put("report_interval_sec", reportIntervalSec);
         s.put("sample_interval_ms", sampleIntervalMs);
-        s.put("extender_deployed", extenderDeployed.get());
+        s.put("extended_count", extendedExtenders.size());
         s.put("connected_servers", serverProfiles.size());
         ctx.json(s);
+    }
+
+    private void apiTargets(RequestContext ctx) {
+        if (extenderService == null) {
+            ctx.json(Map.of("servers", List.of()));
+            return;
+        }
+
+        List<Map<String, Object>> targets = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Object>> entry : extenderService.getServerStates().entrySet()) {
+            String extenderId = entry.getKey();
+            Map<String, Object> state = entry.getValue();
+            String server = String.valueOf(state.getOrDefault("server", extenderId));
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("name", server);
+            row.put("extender_id", extenderId);
+            row.put("extended", extendedExtenders.contains(extenderId));
+            row.put("has_data", serverProfiles.containsKey(server));
+            row.put("last_heartbeat", state.getOrDefault("last_heartbeat", 0L));
+            row.put("players", state.getOrDefault("players", 0));
+            row.put("tps", state.getOrDefault("tps", 0.0));
+            targets.add(row);
+        }
+
+        targets.sort(Comparator.comparing(m -> String.valueOf(m.get("name"))));
+        ctx.json(Map.of("servers", targets));
     }
 
     private void apiServers(RequestContext ctx) {
@@ -409,6 +436,25 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         payload.addProperty("server", name);
         extenderService.sendMessage("profiler", extenderId, "command", payload);
         ctx.json(Map.of("success", true, "message", "Flame graph requested", "extender", extenderId));
+    }
+
+    private void apiExtendServer(RequestContext ctx) {
+        String name = ctx.pathParam("name");
+        if (extenderService == null) { ctx.status(500).json(Map.of("error", "No extender service")); return; }
+
+        String extenderId = findExtenderIdByServer(name);
+        if (extenderId == null) {
+            ctx.status(404).json(Map.of("error", "No extender found for server " + name));
+            return;
+        }
+        if (bundledExtenderJar == null || bundledExtenderJar.length == 0) {
+            ctx.status(500).json(Map.of("error", "Bundled profiler-extender.jar not found"));
+            return;
+        }
+
+        sendDeployToExtender(extenderId);
+        sendConfigToExtender(extenderId);
+        ctx.json(Map.of("success", true, "message", "Profiler extension requested", "extender", extenderId));
     }
 
     private String findExtenderIdByServer(String serverName) {

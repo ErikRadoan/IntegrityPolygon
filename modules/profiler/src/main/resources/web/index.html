@@ -63,16 +63,28 @@
 
         async function render() {
             try {
+                const targetRes = await fetchJson('targets');
+                const targets = targetRes.servers || [];
                 const { servers } = await fetchJson('servers');
-                if (!servers || servers.length === 0) {
-                    document.getElementById('app').innerHTML = '<div class="no-data">No backend servers reporting yet. Make sure the Extender is running.</div>';
+
+                if (!targets || targets.length === 0) {
+                    document.getElementById('app').innerHTML = '<div class="no-data">No connected extenders yet. Start the Paper Extender first.</div>';
                     return;
                 }
-                if (!currentServer || !servers.find(s => s.name === currentServer)) {
-                    currentServer = servers[0].name;
+                if (!currentServer || !targets.find(s => s.name === currentServer)) {
+                    currentServer = targets[0].name;
                 }
 
-                let html = '<div class="server-tabs">';
+                let html = renderTargets(targets);
+
+                if (!servers || !servers.find(s => s.name === currentServer)) {
+                    html += '<div class="no-data">Profiler is not extended on this server yet, or data has not arrived. Click <b>Extend Profiler</b> above.</div>';
+                    document.getElementById('app').innerHTML = html;
+                    drawPlaceholder('No flame data');
+                    return;
+                }
+
+                html += '<div class="server-tabs">';
                 for (const s of servers) {
                     html += `<div class="server-tab ${s.name === currentServer ? 'active' : ''}" onclick="selectServer('${s.name}')">${s.name}</div>`;
                 }
@@ -181,6 +193,26 @@
             return html;
         }
 
+        function renderTargets(targets) {
+            let html = '<div class="card" style="margin-bottom:16px"><h2>Connected Paper Servers</h2><table><tr><th>Server</th><th>Status</th><th>Players</th><th>TPS</th><th>Action</th></tr>';
+            for (const t of targets) {
+                const extended = !!t.extended;
+                const status = extended ? 'Profiler Extended' : 'Not Extended';
+                const action = extended
+                    ? '<span class="btn secondary">Extended</span>'
+                    : `<button class="btn" onclick="extendServer('${t.name}')">Extend Profiler</button>`;
+                html += `<tr>
+                    <td>${t.name}</td>
+                    <td>${status}</td>
+                    <td>${t.players || 0}</td>
+                    <td>${typeof t.tps === 'number' ? t.tps : 0}</td>
+                    <td>${action}</td>
+                </tr>`;
+            }
+            html += '</table></div>';
+            return html;
+        }
+
         function selectServer(name) { currentServer = name; render(); }
 
         async function requestFlame() {
@@ -188,6 +220,20 @@
                 await fetch(BASE + 'request-flame/' + encodeURIComponent(currentServer), { method: 'POST', credentials: 'include' });
                 alert('Flame graph generation requested. Refresh in a few seconds.');
             } catch (e) { alert('Error: ' + e.message); }
+        }
+
+        async function extendServer(name) {
+            try {
+                const res = await fetch(BASE + 'extend/' + encodeURIComponent(name), { method: 'POST', credentials: 'include' });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || res.statusText);
+                }
+                alert('Profiler extension requested for ' + name + '.');
+                await render();
+            } catch (e) {
+                alert('Failed to extend server: ' + e.message);
+            }
         }
 
         function resetFlameZoom() {

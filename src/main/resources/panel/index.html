@@ -1521,7 +1521,7 @@ async function installMod(id, btn) {
   btn.className = 'mc-install-btn installing';
   btn.textContent = 'Installing\u2026';
   try {
-    await api(`/api/repository/${id}/install`, { method: 'POST' });
+    await api(`/api/repository/${encodeURIComponent(id)}/install`, { method: 'POST' });
     btn.className = 'mc-install-btn installed';
     btn.textContent = '\u2713 Installed';
   } catch (e) {
