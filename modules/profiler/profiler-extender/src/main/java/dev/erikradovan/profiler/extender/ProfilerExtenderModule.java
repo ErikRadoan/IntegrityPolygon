@@ -39,6 +39,12 @@ public class ProfilerExtenderModule implements ExtenderModule {
 
     private static final int MSPT_BUFFER_SIZE = 1200; // 1 minute at 20 TPS
     private static final int FLAME_STACK_LIMIT = 1200;
+    private static final int SAMPLE_TREE_STACK_LIMIT = 2000;
+    private static final int SAMPLE_TREE_MAX_DEPTH = 18;
+    private static final int HOTSPOT_TOP_PLUGINS = 30;
+    private static final int HOTSPOT_TOP_CLASSES_PER_PLUGIN = 25;
+    private static final int HOTSPOT_TOP_METHODS_PER_CLASS = 20;
+    private static final int SNAPSHOT_MAX_ROWS = 60;
 
     private ExtenderModuleContext context;
     private Logger logger;
@@ -59,6 +65,7 @@ public class ProfilerExtenderModule implements ExtenderModule {
     private final ConcurrentHashMap<Long, Long> threadLastCpuTime = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> classOwnerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> methodOwnerCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> packageOwnerCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, GcSnapshot> gcBaselines = new ConcurrentHashMap<>();
     private final AtomicLong cumulativeSampleCount = new AtomicLong();
     private final AtomicLong windowSampleCount = new AtomicLong();
@@ -78,6 +85,7 @@ public class ProfilerExtenderModule implements ExtenderModule {
         this.plugin = ctx.getPlugin();
         this.lastGcSnapshotMs = System.currentTimeMillis();
         initializeGcBaselines();
+        rebuildPackageOwnerCache();
 
         ctx.onMessage(this::handleCommand);
 
@@ -311,11 +319,35 @@ public class ProfilerExtenderModule implements ExtenderModule {
     }
 
     private String determinePrimaryPlugin(StackTraceElement[] frames) {
-        for (StackTraceElement frame : frames) {
+        if (frames == null || frames.length == 0) {
+            return "jvm";
+        }
+
+        Map<String, Long> scoreByOwner = new LinkedHashMap<>();
+        boolean sawServer = false;
+
+        // Bias toward leaf frames (where work is actually spent) similar to Spark blame selection.
+        for (int i = 0; i < frames.length; i++) {
+            StackTraceElement frame = frames[i];
             String owner = resolveClassOwner(frame.getClassName());
-            if (!"jvm".equals(owner)) {
-                return owner;
+            if ("server".equals(owner)) {
+                sawServer = true;
             }
+            if (isInfrastructureOwner(owner)) {
+                continue;
+            }
+            long weight = (long) (frames.length - i);
+            scoreByOwner.merge(owner, weight, Long::sum);
+        }
+
+        if (!scoreByOwner.isEmpty()) {
+            return scoreByOwner.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("jvm");
+        }
+        if (sawServer) {
+            return "server";
         }
         return "jvm";
     }
@@ -337,6 +369,20 @@ public class ProfilerExtenderModule implements ExtenderModule {
             return "server";
         }
 
+        // Use longest matching package prefix for accurate plugin attribution
+        // when multiple plugins share overlapping package hierarchies
+        String bestMatch = null;
+        int bestLength = -1;
+        for (Map.Entry<String, String> entry : packageOwnerCache.entrySet()) {
+            if (className.startsWith(entry.getKey()) && entry.getKey().length() > bestLength) {
+                bestMatch = entry.getValue();
+                bestLength = entry.getKey().length();
+            }
+        }
+        if (bestMatch != null) {
+            return bestMatch;
+        }
+
         for (Plugin pluginCandidate : Bukkit.getPluginManager().getPlugins()) {
             if (!pluginCandidate.isEnabled()) {
                 continue;
@@ -345,6 +391,11 @@ public class ProfilerExtenderModule implements ExtenderModule {
             try {
                 Class<?> resolved = Class.forName(className, false, classLoader);
                 if (resolved.getClassLoader() == classLoader) {
+                    // Cache the resolved package for future lookups
+                    int lastDot = className.lastIndexOf('.');
+                    if (lastDot > 0) {
+                        packageOwnerCache.putIfAbsent(className.substring(0, lastDot) + ".", pluginCandidate.getName());
+                    }
                     return pluginCandidate.getName();
                 }
             } catch (ClassNotFoundException | LinkageError ignored) {
@@ -352,6 +403,30 @@ public class ProfilerExtenderModule implements ExtenderModule {
         }
 
         return "jvm";
+    }
+
+    private boolean isInfrastructureOwner(String owner) {
+        return owner == null || owner.isBlank() || "jvm".equals(owner) || "server".equals(owner);
+    }
+
+    private void rebuildPackageOwnerCache() {
+        packageOwnerCache.clear();
+        for (Plugin pluginCandidate : Bukkit.getPluginManager().getPlugins()) {
+            try {
+                String owner = pluginCandidate.getName();
+                String mainClass = pluginCandidate.getDescription().getMain();
+                if (mainClass == null || mainClass.isBlank()) {
+                    continue;
+                }
+                int lastDot = mainClass.lastIndexOf('.');
+                if (lastDot <= 0) {
+                    continue;
+                }
+                String pkg = mainClass.substring(0, lastDot) + ".";
+                packageOwnerCache.put(pkg, owner);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private void sendReport() {
@@ -383,20 +458,8 @@ public class ProfilerExtenderModule implements ExtenderModule {
             Map<String, Long> pluginSampleWindow = snapshotAndReset(windowPluginSamples);
             Map<String, Long> pluginCpuWindow = snapshotAndReset(windowPluginCpuNanos);
 
-            JsonArray topMethods = new JsonArray();
-            List<Map.Entry<String, Long>> sortedMethods = new ArrayList<>(methodWindow.entrySet());
-            sortedMethods.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
-            int methodLimit = Math.min(25, sortedMethods.size());
-            for (int i = 0; i < methodLimit; i++) {
-                Map.Entry<String, Long> entry = sortedMethods.get(i);
-                JsonObject method = new JsonObject();
-                method.addProperty("method", entry.getKey());
-                method.addProperty("plugin", methodOwnerCache.getOrDefault(entry.getKey(), guessPluginForMethod(entry.getKey())));
-                method.addProperty("samples", entry.getValue());
-                method.addProperty("percent", reportSamples > 0 ? round(entry.getValue() * 100.0 / reportSamples) : 0.0);
-                topMethods.add(method);
-            }
-            payload.add("top_methods", topMethods);
+            payload.add("top_methods", buildSnapshotTopMethods(methodWindow, reportSamples));
+            payload.add("hot_method_tree", buildHotMethodTreeJson(methodWindow, reportSamples));
 
             JsonObject pluginCpuJson = new JsonObject();
             long totalCpuWindow = pluginCpuWindow.values().stream().mapToLong(Long::longValue).sum();
@@ -412,10 +475,184 @@ public class ProfilerExtenderModule implements ExtenderModule {
                     .forEach(entry -> pluginSamplesJson.addProperty(entry.getKey(), entry.getValue()));
             payload.add("plugin_samples", pluginSamplesJson);
 
+            Map<String, Long> foldedStacks = snapshot(cumulativeFoldedStacks);
+            payload.add("sample_tree", buildSampleTreeJson(foldedStacks));
+
             context.sendMessage("profiling_data", payload);
         } catch (Exception e) {
             logger.warning("Failed to send profiling report: " + e.getMessage());
         }
+    }
+
+    private JsonObject buildSampleTreeJson(Map<String, Long> foldedStacks) {
+        TreeNode root = new TreeNode("(root)");
+        List<Map.Entry<String, Long>> sortedStacks = new ArrayList<>(foldedStacks.entrySet());
+        sortedStacks.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+
+        int limit = Math.min(SAMPLE_TREE_STACK_LIMIT, sortedStacks.size());
+        for (int i = 0; i < limit; i++) {
+            Map.Entry<String, Long> entry = sortedStacks.get(i);
+            long count = entry.getValue() != null ? entry.getValue() : 0L;
+            if (count <= 0L) {
+                continue;
+            }
+
+            String[] frames = entry.getKey().split(";");
+            TreeNode node = root;
+            node.total += count;
+
+            int depth = 0;
+            for (String frame : frames) {
+                if (frame == null || frame.isBlank()) {
+                    continue;
+                }
+                if (++depth > SAMPLE_TREE_MAX_DEPTH) {
+                    break;
+                }
+                node = node.children.computeIfAbsent(frame, TreeNode::new);
+                node.total += count;
+            }
+            node.self += count;
+        }
+
+        return toJson(root, root.total);
+    }
+
+    private JsonObject buildHotMethodTreeJson(Map<String, Long> methodWindow, long totalSamples) {
+        Map<String, PluginNode> plugins = new LinkedHashMap<>();
+
+        methodWindow.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .forEach(entry -> {
+                    String fullMethod = entry.getKey();
+                    long samples = entry.getValue() != null ? entry.getValue() : 0L;
+                    if (samples <= 0L) {
+                        return;
+                    }
+
+                    String pluginName = methodOwnerCache.getOrDefault(fullMethod, guessPluginForMethod(fullMethod));
+                    String className = extractClassName(fullMethod);
+                    String methodName = extractMethodName(fullMethod);
+
+                    PluginNode pluginNode = plugins.computeIfAbsent(pluginName, PluginNode::new);
+                    pluginNode.samples += samples;
+
+                    ClassNode classNode = pluginNode.classes.computeIfAbsent(className, ClassNode::new);
+                    classNode.samples += samples;
+
+                    MethodNode methodNode = classNode.methods.computeIfAbsent(methodName, MethodNode::new);
+                    methodNode.samples += samples;
+                    methodNode.fullName = fullMethod;
+                });
+
+        JsonArray pluginArray = new JsonArray();
+        plugins.values().stream()
+                .sorted((a, b) -> Long.compare(b.samples, a.samples))
+                .limit(HOTSPOT_TOP_PLUGINS)
+                .forEach(pluginNode -> {
+                    JsonObject pluginJson = new JsonObject();
+                    pluginJson.addProperty("name", pluginNode.name);
+                    pluginJson.addProperty("samples", pluginNode.samples);
+                    pluginJson.addProperty("percent", totalSamples > 0 ? round(pluginNode.samples * 100.0 / totalSamples) : 0.0);
+                    pluginJson.addProperty("is_infrastructure", isInfrastructureOwner(pluginNode.name));
+
+                    JsonArray classArray = new JsonArray();
+                    pluginNode.classes.values().stream()
+                            .sorted((a, b) -> Long.compare(b.samples, a.samples))
+                            .limit(HOTSPOT_TOP_CLASSES_PER_PLUGIN)
+                            .forEach(classNode -> {
+                                JsonObject classJson = new JsonObject();
+                                classJson.addProperty("name", classNode.name);
+                                classJson.addProperty("samples", classNode.samples);
+                                classJson.addProperty("percent", totalSamples > 0 ? round(classNode.samples * 100.0 / totalSamples) : 0.0);
+
+                                JsonArray methodArray = new JsonArray();
+                                classNode.methods.values().stream()
+                                        .sorted((a, b) -> Long.compare(b.samples, a.samples))
+                                        .limit(HOTSPOT_TOP_METHODS_PER_CLASS)
+                                        .forEach(methodNode -> {
+                                            JsonObject methodJson = new JsonObject();
+                                            methodJson.addProperty("name", methodNode.name);
+                                            methodJson.addProperty("full_name", methodNode.fullName);
+                                            methodJson.addProperty("samples", methodNode.samples);
+                                            methodJson.addProperty("percent", totalSamples > 0 ? round(methodNode.samples * 100.0 / totalSamples) : 0.0);
+                                            methodArray.add(methodJson);
+                                        });
+                                classJson.add("methods", methodArray);
+                                classArray.add(classJson);
+                            });
+
+                    pluginJson.add("classes", classArray);
+                    pluginArray.add(pluginJson);
+                });
+
+        JsonObject result = new JsonObject();
+        result.addProperty("total_samples", totalSamples);
+        result.add("plugins", pluginArray);
+        return result;
+    }
+
+    private JsonArray buildSnapshotTopMethods(Map<String, Long> methodWindow, long totalSamples) {
+        // Build a flat list of all methods with plugin attribution
+        List<MethodSnapshot> allMethods = new ArrayList<>();
+
+        for (Map.Entry<String, Long> entry : methodWindow.entrySet()) {
+            String fullMethod = entry.getKey();
+            long samples = entry.getValue() != null ? entry.getValue() : 0L;
+            if (samples <= 0L) {
+                continue;
+            }
+
+            String pluginName = methodOwnerCache.getOrDefault(fullMethod, guessPluginForMethod(fullMethod));
+            allMethods.add(new MethodSnapshot(
+                    fullMethod,
+                    pluginName,
+                    extractClassName(fullMethod),
+                    extractMethodName(fullMethod),
+                    samples,
+                    isInfrastructureOwner(pluginName)
+            ));
+        }
+
+        // Sort globally: non-infrastructure methods first, then by sample count descending
+        allMethods.sort((a, b) -> {
+            if (a.infrastructure() != b.infrastructure()) {
+                return a.infrastructure() ? 1 : -1;
+            }
+            return Long.compare(b.samples(), a.samples());
+        });
+
+        JsonArray topMethods = new JsonArray();
+        int limit = Math.min(SNAPSHOT_MAX_ROWS, allMethods.size());
+        for (int i = 0; i < limit; i++) {
+            MethodSnapshot m = allMethods.get(i);
+            JsonObject method = new JsonObject();
+            method.addProperty("method", m.fullMethod());
+            method.addProperty("plugin", m.plugin());
+            method.addProperty("class_name", m.className());
+            method.addProperty("method_name", m.methodName());
+            method.addProperty("is_infrastructure", m.infrastructure());
+            method.addProperty("samples", m.samples());
+            method.addProperty("percent", totalSamples > 0 ? round(m.samples() * 100.0 / totalSamples) : 0.0);
+            topMethods.add(method);
+        }
+
+        return topMethods;
+    }
+
+    private JsonObject toJson(TreeNode node, long rootTotal) {
+        JsonObject json = new JsonObject();
+        json.addProperty("name", node.name);
+        json.addProperty("samples", node.total);
+        json.addProperty("self_samples", node.self);
+        json.addProperty("percent", rootTotal > 0 ? round(node.total * 100.0 / rootTotal) : 0.0);
+
+        JsonArray children = new JsonArray();
+        node.children.values().stream()
+                .sorted((a, b) -> Long.compare(b.total, a.total))
+                .forEach(child -> children.add(toJson(child, rootTotal)));
+        json.add("children", children);
+        return json;
     }
 
     private void populateCpuMetrics(JsonObject payload) {
@@ -589,6 +826,28 @@ public class ProfilerExtenderModule implements ExtenderModule {
         return resolveClassOwner(className);
     }
 
+    private String extractClassName(String fullMethod) {
+        if (fullMethod == null || fullMethod.isBlank()) {
+            return "?";
+        }
+        int split = fullMethod.indexOf('#');
+        if (split <= 0) {
+            return fullMethod;
+        }
+        return fullMethod.substring(0, split);
+    }
+
+    private String extractMethodName(String fullMethod) {
+        if (fullMethod == null || fullMethod.isBlank()) {
+            return "?";
+        }
+        int split = fullMethod.indexOf('#');
+        if (split < 0 || split >= fullMethod.length() - 1) {
+            return fullMethod;
+        }
+        return fullMethod.substring(split + 1);
+    }
+
     private double round(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
@@ -598,5 +857,53 @@ public class ProfilerExtenderModule implements ExtenderModule {
 
     private record GcSnapshot(long collections, long timeMs) {
     }
+
+    private static class TreeNode {
+        final String name;
+        long total;
+        long self;
+        final Map<String, TreeNode> children = new LinkedHashMap<>();
+
+        TreeNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private static class PluginNode {
+        final String name;
+        long samples;
+        final Map<String, ClassNode> classes = new LinkedHashMap<>();
+
+        PluginNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private static class ClassNode {
+        final String name;
+        long samples;
+        final Map<String, MethodNode> methods = new LinkedHashMap<>();
+
+        ClassNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private static class MethodNode {
+        final String name;
+        long samples;
+        String fullName;
+
+        MethodNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private record MethodSnapshot(String fullMethod,
+                                  String plugin,
+                                  String className,
+                                  String methodName,
+                                  long samples,
+                                  boolean infrastructure) {}
 }
 

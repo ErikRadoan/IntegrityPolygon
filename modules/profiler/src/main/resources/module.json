@@ -1,0 +1,10 @@
+﻿{
+  "id": "profiler",
+  "name": "Profiler",
+  "version": "1.0.0",
+  "description": "Deep JVM profiling for Paper servers — thread sampling with flame graph output, TPS/MSPT, per-plugin CPU attribution, memory & GC analysis. Automatically deploys extender modules.",
+  "authors": ["ErikRadovan"],
+  "main": "dev.erikradovan.profiler.ProfilerModule",
+  "dashboard": "web/"
+}
+

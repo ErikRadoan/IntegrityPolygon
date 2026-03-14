@@ -1,0 +1,6 @@
+﻿{
+  "id": "profiler",
+  "main": "dev.erikradovan.profiler.extender.ProfilerExtenderModule",
+  "version": "1.0.0"
+}
+

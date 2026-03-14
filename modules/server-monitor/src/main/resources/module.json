@@ -1,0 +1,10 @@
+{
+  "id": "server-monitor",
+  "name": "Server Monitor",
+  "version": "1.0.0",
+  "description": "Real-time server performance profiling — TPS, memory, CPU, chunk tick costs, plugin tick times, and lag spike detection with automatic player attribution.",
+  "authors": ["ErikRadovan"],
+  "main": "dev.erikradovan.servermonitor.ServerMonitorModule",
+  "dashboard": "web/"
+}
+

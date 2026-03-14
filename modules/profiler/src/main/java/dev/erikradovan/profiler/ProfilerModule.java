@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.erikradovan.integritypolygon.api.AlertService;
 import dev.erikradovan.integritypolygon.api.ExtenderMessage;
 import dev.erikradovan.integritypolygon.api.ExtenderService;
@@ -261,6 +260,14 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
                 profile.topMethods = methods;
             }
 
+            if (data.has("sample_tree")) {
+                profile.sampleTreeJson = data.get("sample_tree").toString();
+            }
+
+            if (data.has("hot_method_tree")) {
+                profile.hotMethodTreeJson = data.get("hot_method_tree").toString();
+            }
+
             // Per-plugin CPU
             if (data.has("plugin_cpu")) {
                 Map<String, Double> pluginCpu = new LinkedHashMap<>();
@@ -308,11 +315,9 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         d.get("targets", this::apiTargets);
         d.get("servers", this::apiServers);
         d.get("server/{name}", this::apiServerDetail);
-        d.get("server/{name}/flamegraph", this::apiFlameGraph);
         d.get("config", this::apiGetConfig);
         d.post("config", this::apiSaveConfig);
         d.post("extend/{name}", this::apiExtendServer);
-        d.post("request-flame/{name}", this::apiRequestFlame);
     }
 
     private void apiStatus(RequestContext ctx) {
@@ -337,10 +342,15 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
             String extenderId = entry.getKey();
             Map<String, Object> state = entry.getValue();
             String server = String.valueOf(state.getOrDefault("server", extenderId));
+            String serverIp = String.valueOf(state.getOrDefault("server_ip", ""));
+            int serverPort = intFrom(state.getOrDefault("server_port", 0));
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("name", server);
             row.put("extender_id", extenderId);
+            row.put("server_ip", serverIp);
+            row.put("server_port", serverPort);
+            row.put("identifier", buildIdentifier(extenderId, serverIp, serverPort));
             row.put("extended", extendedExtenders.contains(extenderId));
             row.put("has_data", serverProfiles.containsKey(server));
             row.put("last_heartbeat", state.getOrDefault("last_heartbeat", 0L));
@@ -401,41 +411,14 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         detail.put("total_samples", p.totalSamples);
         detail.put("cumulative_samples", p.cumulativeSamples);
         detail.put("top_methods", p.topMethods != null ? p.topMethods : List.of());
+        detail.put("sample_tree", parseJsonObject(p.sampleTreeJson));
+        detail.put("hot_method_tree", parseJsonObject(p.hotMethodTreeJson));
         detail.put("plugin_cpu", p.pluginCpu != null ? p.pluginCpu : Map.of());
         detail.put("plugin_samples", p.pluginSamples != null ? p.pluginSamples : Map.of());
         detail.put("sample_interval_ms", p.sampleIntervalMs);
         detail.put("report_interval_sec", p.reportIntervalSec);
-        detail.put("flame_graph_available", p.flameGraphJson != null);
-        detail.put("last_flame_graph_update", p.lastFlameGraphUpdate);
         detail.put("last_update", p.lastUpdate);
         ctx.json(detail);
-    }
-
-    private void apiFlameGraph(RequestContext ctx) {
-        String name = ctx.pathParam("name");
-        ServerProfile p = serverProfiles.get(name);
-        if (p == null || p.flameGraphJson == null) {
-            ctx.status(404).json(Map.of("error", "No flame graph data"));
-            return;
-        }
-        ctx.json(JsonParser.parseString(p.flameGraphJson));
-    }
-
-    private void apiRequestFlame(RequestContext ctx) {
-        String name = ctx.pathParam("name");
-        if (extenderService == null) { ctx.status(500).json(Map.of("error", "No extender service")); return; }
-
-        String extenderId = findExtenderIdByServer(name);
-        if (extenderId == null) {
-            ctx.status(404).json(Map.of("error", "No extender found for server " + name));
-            return;
-        }
-
-        JsonObject payload = new JsonObject();
-        payload.addProperty("action", "generate_flame");
-        payload.addProperty("server", name);
-        extenderService.sendMessage("profiler", extenderId, "command", payload);
-        ctx.json(Map.of("success", true, "message", "Flame graph requested", "extender", extenderId));
     }
 
     private void apiExtendServer(RequestContext ctx) {
@@ -457,14 +440,46 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         ctx.json(Map.of("success", true, "message", "Profiler extension requested", "extender", extenderId));
     }
 
-    private String findExtenderIdByServer(String serverName) {
-        if (extenderService == null || serverName == null) return null;
-        for (Map.Entry<String, Map<String, Object>> entry : extenderService.getServerStates().entrySet()) {
-            Object server = entry.getValue().get("server");
-            if (server != null && serverName.equalsIgnoreCase(String.valueOf(server))) {
+    private String findExtenderIdByServer(String serverIdentifier) {
+        if (extenderService == null || serverIdentifier == null) return null;
+
+        Map<String, Map<String, Object>> states = extenderService.getServerStates();
+
+        // First try: direct extender_id match
+        if (states.containsKey(serverIdentifier)) {
+            return serverIdentifier;
+        }
+
+        ServerMatchRef ref = parseServerIdentifier(serverIdentifier);
+        if (ref != null) {
+            // Prefer strong identity (ip+port) if available
+            for (Map.Entry<String, Map<String, Object>> entry : states.entrySet()) {
+                Map<String, Object> state = entry.getValue();
+                String ip = String.valueOf(state.getOrDefault("server_ip", ""));
+                int port = intFrom(state.getOrDefault("server_port", 0));
+                if (!ref.ip().isBlank() && ref.ip().equalsIgnoreCase(ip) && ref.port() > 0 && ref.port() == port) {
+                    return entry.getKey();
+                }
+            }
+
+            if (!ref.ip().isBlank()) {
+                for (Map.Entry<String, Map<String, Object>> entry : states.entrySet()) {
+                    String ip = String.valueOf(entry.getValue().getOrDefault("server_ip", ""));
+                    if (ref.ip().equalsIgnoreCase(ip)) {
+                        return entry.getKey();
+                    }
+                }
+            }
+        }
+
+        // Last fallback: plain server IP match
+        for (Map.Entry<String, Map<String, Object>> entry : states.entrySet()) {
+            Object ip = entry.getValue().get("server_ip");
+            if (ip != null && serverIdentifier.equalsIgnoreCase(String.valueOf(ip))) {
                 return entry.getKey();
             }
         }
+
         return null;
     }
 
@@ -508,6 +523,8 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         volatile long totalSamples;
         volatile long cumulativeSamples;
         volatile List<Map<String, Object>> topMethods;
+        volatile String sampleTreeJson;
+        volatile String hotMethodTreeJson;
         volatile Map<String, Double> pluginCpu;
         volatile Map<String, Long> pluginSamples;
         volatile List<Map<String, Object>> gcCollectors;
@@ -521,6 +538,47 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     // ── Helpers ─────────────────────────────────────────────────
+
+    private record ServerMatchRef(String ip, int port) {}
+
+    private String buildIdentifier(String extenderId, String ip, int port) {
+        if (ip == null || ip.isBlank() || port <= 0) {
+            return extenderId;
+        }
+        return extenderId + "|" + ip + ":" + port;
+    }
+
+    private ServerMatchRef parseServerIdentifier(String value) {
+        if (value == null || value.isBlank()) return null;
+        int pipe = value.indexOf('|');
+        String raw = pipe >= 0 ? value.substring(pipe + 1) : value;
+        int colon = raw.lastIndexOf(':');
+        if (colon <= 0 || colon >= raw.length() - 1) return null;
+        String ip = raw.substring(0, colon).trim();
+        int port = intFrom(raw.substring(colon + 1));
+        if (ip.isBlank()) return null;
+        return new ServerMatchRef(ip, port);
+    }
+
+    private int intFrom(Object value) {
+        if (value instanceof Number n) return n.intValue();
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private Object parseJsonObject(String rawJson) {
+        if (rawJson == null || rawJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return gson.fromJson(rawJson, Object.class);
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
 
     private double round(double v) { return Math.round(v * 100.0) / 100.0; }
     private boolean boolCfg(Map<String, Object> m, String k, boolean d) {

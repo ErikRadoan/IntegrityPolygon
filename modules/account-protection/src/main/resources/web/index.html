@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Account Protection</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
+[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
+[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
+[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
+[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
+[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
+body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+.stat .v{font-size:18px;font-weight:700;margin-top:2px}
+.v.accent{color:var(--accent)}.v.green{color:var(--green)}.v.amber{color:var(--amber)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
+.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
+.sw input{display:none}
+.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
+.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
+.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
+.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.field input{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
+.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:10px}
+.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
+.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
+.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-weight:600;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--border)}
+td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.badge.ok{background:rgba(34,197,94,.1);color:var(--green)}
+.badge.pending{background:rgba(245,158,11,.1);color:var(--amber)}
+.qr-box{text-align:center;padding:16px}
+.qr-box img{border-radius:8px;border:2px solid var(--border);background:#fff}
+.secret-text{font-family:monospace;font-size:14px;font-weight:600;color:var(--accent);letter-spacing:2px;text-align:center;padding:8px;background:var(--input);border-radius:6px;margin:8px 0;user-select:all}
+.enroll-result{margin-top:12px}
+.row{display:flex;gap:8px;align-items:end}
+.dismiss-btn{margin-top:8px;text-align:center}
+</style></head><body>
+<div id="root">Loading...</div>
+<script>
+// ── Theme sync ──
+(function(){
+  const p=new URLSearchParams(location.search),t=p.get('theme');
+  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
+  window.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='ip-theme-change'){
+      const th=e.data.theme;
+      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme',th);
+    }
+  });
+})();
+const token=new URLSearchParams(location.search).get('token'),API=location.origin;
+async function api(p,o={}){const h={'Content-Type':'application/json','Authorization':'Bearer '+token};const r=await fetch(API+'/api/modules/account-protection/'+p,{...o,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
+
+let initialized=false, enrollmentData=null, lastStaffJson='';
+
+// Persist enrollment data in sessionStorage
+try { const stored=sessionStorage.getItem('ip_enroll_data'); if(stored) enrollmentData=JSON.parse(stored); } catch(e) {}
+
+async function load(){
+  try{
+    const[st,sl]=await Promise.all([api('status'),api('staff')]);
+    if(!initialized){
+      const cfg=await api('config');
+      renderFull(st,sl.staff||[],cfg);
+      initialized=true;
+    }else{
+      // Granular updates — only touch textContent, never rewrite DOM structure
+      updateStatValues(st);
+      // Only re-render staff table if data actually changed
+      const newJson=JSON.stringify(sl.staff||[]);
+      if(newJson!==lastStaffJson){
+        lastStaffJson=newJson;
+        renderStaffTable(sl.staff||[]);
+      }
+    }
+  }catch(e){
+    if(!initialized) document.getElementById('root').innerHTML='<div style="color:var(--red)">'+esc(e.error||e.message||'Error')+'</div>';
+  }
+}
+
+function renderFull(st,staff,cfg){
+const root=document.getElementById('root');
+root.innerHTML=`
+<div class="grid">
+<div class="stat"><div class="l">Enrolled Staff</div><div class="v accent" id="vEnrolled">${st.enrolled_staff}</div></div>
+<div class="stat"><div class="l">Active Sessions</div><div class="v green" id="vSessions">${st.active_sessions}</div></div>
+<div class="stat"><div class="l">Pending 2FA</div><div class="v" id="vPending">${st.pending_verification}</div></div>
+</div>
+<div class="cols">
+<div>
+<div class="card"><h3>Settings</h3>
+<div class="tog"><span>Two-Factor Authentication</span><label class="sw"><input type="checkbox" id="t2fa" ${cfg.enable_2fa?'checked':''}><span class="tr"></span></label></div>
+<div class="tog"><span>Session IP Locking</span><label class="sw"><input type="checkbox" id="tSess" ${cfg.enable_session_locking?'checked':''}><span class="tr"></span></label></div>
+<button class="btn" style="margin-top:6px" onclick="saveCfg()">Save</button>
+<div id="cfgMsg" class="msg"></div>
+</div>
+<div class="card"><h3>Enroll Staff</h3>
+<div class="row"><div class="field" style="margin:0;flex:1"><input id="enrollName" placeholder="Minecraft username"></div><button class="btn p" onclick="enroll()">Enroll</button></div>
+<div id="enrollResult"></div>
+<div id="enrollMsg" class="msg"></div>
+</div>
+</div>
+<div>
+<div class="card"><h3>Staff Members</h3>
+<div id="staffTable"></div>
+</div>
+</div>
+</div>`;
+lastStaffJson=JSON.stringify(staff);
+renderStaffTable(staff);
+if(enrollmentData) showEnrollment(enrollmentData);
+}
+
+function updateStatValues(st){
+  const e=document.getElementById('vEnrolled'); if(e) e.textContent=st.enrolled_staff;
+  const s=document.getElementById('vSessions'); if(s) s.textContent=st.active_sessions;
+  const p=document.getElementById('vPending');
+  if(p){ p.textContent=st.pending_verification; p.className=st.pending_verification>0?'v amber':'v'; }
+}
+
+function renderStaffTable(staff){
+  const el=document.getElementById('staffTable'); if(!el) return;
+  el.innerHTML=staff.length?`<table><thead><tr><th>Username</th><th>Status</th><th>Last IP</th><th>Trusted IPs</th><th></th></tr></thead><tbody>
+${staff.map(s=>`<tr>
+<td>${esc(s.username)}</td>
+<td>${s.enrolled?'<span class="badge ok">Active</span>':'<span class="badge pending">Pending</span>'}</td>
+<td><code style="font-size:11px">${esc(s.last_ip||'N/A')}</code></td>
+<td>${(s.trusted_ips||[]).map(ip=>'<code style="font-size:10px">'+esc(ip)+'</code>').join(', ')||'<span style="color:var(--muted)">None</span>'}</td>
+<td style="text-align:right"><button class="btn sm d" onclick="removeStaff('${esc(s.username)}')">Remove</button></td>
+</tr>`).join('')}
+</tbody></table>`:'<div style="color:var(--muted);font-size:11px">No staff enrolled yet</div>';
+}
+
+function showEnrollment(d){
+  const res=document.getElementById('enrollResult');
+  if(!res)return;
+  const otpUri=d.otp_uri||'';
+  res.innerHTML=`<div class="enroll-result">
+<div class="qr-box" id="qrBox"></div>
+<div class="secret-text" id="secretText">${esc(d.secret)}</div>
+<div style="text-align:center;margin:6px 0"><button class="btn sm" onclick="copySecret()">Copy Secret</button> <span id="copyFeedback" style="font-size:11px;color:var(--green);display:none">Copied!</span></div>
+<p style="text-align:center;font-size:11px;color:var(--dim)">Scan QR with your authenticator app.<br>Player must run <code>/2fa &lt;code&gt;</code> in-game to complete enrollment.</p>
+<div class="dismiss-btn"><button class="btn" onclick="dismissEnrollment()">Dismiss</button></div>
+</div>`;
+  // Generate QR code
+  const box=document.getElementById('qrBox');
+  if(box && otpUri){
+    try{
+      generateQR(box, otpUri, 180);
+    }catch(e){
+      box.innerHTML='<div style="padding:16px;font-size:11px;color:var(--dim)">QR generation failed.<br>Use the secret key above to add manually.</div>';
+    }
+  }
+}
+
+function copySecret(){
+  const el=document.getElementById('secretText');
+  const fb=document.getElementById('copyFeedback');
+  if(!el)return;
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2000);}
+  }).catch(()=>{
+    // Fallback for older browsers
+    const ta=document.createElement('textarea');ta.value=el.textContent;ta.style.position='fixed';ta.style.left='-9999px';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2000);}
+  });
+}
+
+// ── QR Code via Google Charts API (reliable, no client-side encoding) ──
+function generateQR(container, text, size) {
+  const img = document.createElement('img');
+  img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size + '&chl=' + encodeURIComponent(text) + '&choe=UTF-8';
+  img.width = size;
+  img.height = size;
+  img.style.cssText = 'border-radius:8px;border:2px solid rgba(255,255,255,.06);background:#fff';
+  img.onerror = function() {
+    container.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--dim)">QR generation failed.<br>Use the secret key above to add manually.</div>';
+  };
+  container.appendChild(img);
+}
+
+function dismissEnrollment(){
+  enrollmentData=null;
+  try { sessionStorage.removeItem('ip_enroll_data'); } catch(e) {}
+  const res=document.getElementById('enrollResult'); if(res) res.innerHTML='';
+  const msg=document.getElementById('enrollMsg'); if(msg){msg.className='msg';msg.style.display='none';}
+}
+
+async function enroll(){
+  const nameEl=document.getElementById('enrollName'), name=nameEl.value.trim();
+  if(!name)return;
+  const msg=document.getElementById('enrollMsg');
+  try{
+    const d=await api('staff/enroll',{method:'POST',body:JSON.stringify({username:name})});
+    enrollmentData=d;
+    try { sessionStorage.setItem('ip_enroll_data', JSON.stringify(d)); } catch(e) {}
+    showEnrollment(d);
+    msg.className='msg ok'; msg.textContent=d.message;
+    nameEl.value='';
+    const[st,sl]=await Promise.all([api('status'),api('staff')]);
+    updateStatValues(st); lastStaffJson=JSON.stringify(sl.staff||[]); renderStaffTable(sl.staff||[]);
+  }catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
+}
+
+async function removeStaff(u){if(!confirm('Remove '+u+'?'))return;try{await api('staff/remove',{method:'POST',body:JSON.stringify({username:u})});const[st,sl]=await Promise.all([api('status'),api('staff')]);updateStatValues(st);lastStaffJson=JSON.stringify(sl.staff||[]);renderStaffTable(sl.staff||[])}catch(e){alert(e.error||'Failed')}}
+async function saveCfg(){
+  const msg=document.getElementById('cfgMsg');
+  try{await api('config',{method:'POST',body:JSON.stringify({enable_2fa:document.getElementById('t2fa').checked,enable_session_locking:document.getElementById('tSess').checked})});msg.className='msg ok';msg.textContent='Saved'}
+  catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
+}
+load();setInterval(load,5000);
+</script></body></html>

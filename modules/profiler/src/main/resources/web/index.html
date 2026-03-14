@@ -1,460 +1,528 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profiler — IntegrityPolygon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f1117; --card: #1a1d26; --border: #2a2d3a; --text: #e4e4e7; --muted: #888; --accent: #3b82f6; --green: #22c55e; --yellow: #eab308; --red: #ef4444; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; background: var(--bg); color: var(--text); padding: 20px; }
-        h1 { font-size: 1.5em; margin-bottom: 16px; }
-        h2 { font-size: 1.1em; margin-bottom: 12px; color: var(--accent); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-        .stat { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
-        .stat:last-child { border: none; }
-        .stat-label { color: var(--muted); }
-        .stat-value { font-weight: bold; font-variant-numeric: tabular-nums; }
-        .good { color: var(--green); } .warn { color: var(--yellow); } .bad { color: var(--red); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
-        th { color: var(--muted); font-weight: 500; font-size: 0.85em; text-transform: uppercase; }
-        .bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-        .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s; }
-        .no-data { color: var(--muted); padding: 40px; text-align: center; }
-        .server-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .server-tab { padding: 8px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--muted); transition: all 0.2s; }
-        .server-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .server-tab:hover { border-color: var(--accent); }
-        .btn { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; text-decoration: none; display: inline-block; }
-        .btn:hover { opacity: 0.9; }
-        .btn.secondary { background: #374151; }
-        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-        .flame-wrap { position: relative; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #0b0d14; }
-        #flameCanvas { width: 100%; display: block; cursor: pointer; }
-        .flame-tip {
-            position: absolute; display: none; pointer-events: none; z-index: 20;
-            background: rgba(8, 10, 18, 0.96); border: 1px solid var(--border); border-radius: 6px;
-            padding: 6px 8px; font-size: 12px; white-space: nowrap; color: var(--text);
-        }
-        .flame-hint { color: var(--muted); font-size: 12px; margin: 6px 0 10px; }
-        .flame-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+        :root{--bg:#0d0f1a;--surface:#121425;--card:#161830;--border:rgba(255,255,255,.06);--border-hl:rgba(255,255,255,.12);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--accent-dim:rgba(34,211,167,.12);--blue:#3b82f6;--blue-dim:rgba(59,130,246,.12);--green:#22c55e;--amber:#f59e0b;--red:#f43f5e;--r:10px;--font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',Consolas,monospace}
+        [data-theme="midnight"]{--bg:#0a0a0f;--surface:#101018;--card:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8;--accent-dim:rgba(129,140,248,.12)}
+        [data-theme="nord"]{--bg:#2e3440;--surface:#3b4252;--card:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--accent-dim:rgba(136,192,208,.12);--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
+        [data-theme="emerald"]{--bg:#041210;--surface:#081c18;--card:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--accent-dim:rgba(52,211,153,.12)}
+        [data-theme="light"]{--bg:#f5f6fa;--surface:#ffffff;--card:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--accent-dim:rgba(13,147,115,.08);--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
+        [data-theme="rose"]{--bg:#120a0d;--surface:#1a1015;--card:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--accent-dim:rgba(251,113,133,.12)}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+        .fade-in{animation:fadeIn .3s ease both}
+        .slide-up{animation:slideUp .35s ease both}
+
+        /* Header */
+        .prof-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+        .prof-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,211,167,.15)}
+        .prof-icon svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+        .prof-title{font-size:22px;font-weight:700}
+        .prof-sub{color:var(--dim);font-size:12px;margin-top:2px}
+
+        /* Stats Grid */
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;transition:border-color .2s,box-shadow .2s}
+        .stat-card:hover{border-color:var(--border-hl);box-shadow:0 0 20px rgba(34,211,167,.05)}
+        .stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+        .stat-value{font-size:22px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+        .stat-value.good{color:var(--green)}.stat-value.warn{color:var(--amber)}.stat-value.bad{color:var(--red)}.stat-value.hl{color:var(--accent)}
+
+        /* Server Tabs */
+        .server-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+        .server-tab{padding:8px 18px;background:var(--surface);border:1px solid var(--border);border-radius:20px;cursor:pointer;color:var(--dim);font-size:12px;font-weight:600;transition:all .2s;font-family:var(--font)}
+        .server-tab.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(34,211,167,.3);box-shadow:0 0 12px rgba(34,211,167,.1)}
+        .server-tab:hover:not(.active){border-color:var(--border-hl);color:var(--text)}
+        .server-tab .tab-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px}
+
+        /* Card */
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+        .card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+        .card h3 svg{width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2}
+
+        /* Charts Grid */
+        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+        @media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
+        .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+        .chart-card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:8px}
+        .chart-card canvas{width:100%;height:80px;display:block}
+
+        /* Actions */
+        .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+        .btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+        .btn:hover{border-color:var(--accent);color:var(--accent)}
+        .btn.primary{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
+        .btn.primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+        .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+        /* Flame Graph */
+        .flame-wrap{border:1px solid var(--border);border-radius:var(--r);background:rgba(0,0,0,.2);padding:8px;margin-bottom:12px;overflow-x:auto}
+        #flameCanvas{width:100%;display:block;cursor:pointer;border-radius:6px}
+        .flame-tooltip{position:fixed;background:var(--card);border:1px solid var(--border-hl);border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--mono);color:var(--text);pointer-events:none;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:400px;display:none}
+        .flame-tooltip .ft-name{font-weight:600;color:var(--accent);margin-bottom:4px;word-break:break-all}
+        .flame-tooltip .ft-meta{color:var(--dim)}
+
+        /* Hot Methods Tree */
+        .method-tree{font-family:var(--mono);font-size:12px}
+        .tree-node{border-left:2px solid var(--border);margin-left:8px;padding-left:12px;margin-top:2px}
+        .tree-node:hover{border-left-color:var(--accent)}
+        .tree-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background .1s}
+        .tree-row:hover{background:rgba(255,255,255,.03)}
+        .tree-toggle{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;transition:transform .15s;flex-shrink:0}
+        .tree-toggle.open{transform:rotate(90deg)}
+        .tree-toggle.leaf{visibility:hidden}
+        .tree-bar{width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
+        .tree-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+        .tree-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+        .tree-name .pkg{color:var(--muted)}
+        .tree-name .cls{color:var(--blue)}
+        .tree-name .mtd{color:var(--accent)}
+        .tree-pct{font-weight:600;min-width:50px;text-align:right;font-variant-numeric:tabular-nums}
+        .tree-samples{color:var(--muted);min-width:60px;text-align:right;font-size:11px}
+        .tree-children{overflow:hidden;transition:max-height .2s ease}
+        .tree-children.collapsed{max-height:0!important}
+
+        /* GC Table */
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{text-align:left;font-weight:600;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
+        td{padding:8px 10px;border-bottom:1px solid var(--border)}
+
+        /* No data */
+        .no-data{color:var(--muted);padding:40px;text-align:center;font-size:13px}
+        .no-data svg{width:48px;height:48px;stroke:var(--border-hl);fill:none;stroke-width:1.5;margin-bottom:12px;display:block;margin:0 auto 12px}
+
+        /* Filters */
+        .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+        .filters input{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--font);min-width:200px}
+        .filters input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+        .filters label{color:var(--dim);font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+        .collapse-all-btn{font-size:11px;color:var(--dim);cursor:pointer;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:none;font-family:var(--font);transition:all .12s}
+        .collapse-all-btn:hover{border-color:var(--accent);color:var(--accent)}
     </style>
 </head>
 <body>
-    <h1>🔍 Profiler</h1>
-    <div id="app"><div class="no-data">Loading profiling data…</div></div>
+<div class="prof-header fade-in">
+    <div class="prof-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 1 1 16 0"/><path d="M12 14l3-4"/><circle cx="12" cy="14" r="1.5"/></svg>
+    </div>
+    <div>
+        <div class="prof-title">Profiler</div>
+        <div class="prof-sub">JVM thread sampling, hotspot detection, and performance analysis</div>
+    </div>
+</div>
+<div id="app"><div class="no-data"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>Loading profiling data…</div></div>
 
-    <script>
-        const MODULE_ID = (() => {
-            const parts = location.pathname.split('/').filter(Boolean);
-            // /modules/{id}/...
-            if (parts.length >= 2 && parts[0] === 'modules') return parts[1];
-            return null;
-        })();
-        const BASE = window.IP_MODULE_API_BASE || (MODULE_ID ? `/api/modules/${MODULE_ID}/` : '/api/modules/profiler/');
-        const TOKEN = new URLSearchParams(location.search).get('token') || '';
-        let currentServer = null;
-        const flameState = { server: null, updatedAt: 0, tree: null, zoomPath: [] };
+<script>
+// ── Theme sync ──
+(function(){
+  const p=new URLSearchParams(location.search),t=p.get('theme');
+  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
+  window.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='ip-theme-change'){
+      const th=e.data.theme;
+      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme',th);
+    }
+  });
+})();
 
-        function authHeaders() {
-            return TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {};
-        }
+const token=new URLSearchParams(location.search).get('token'),API=location.origin;
+async function api(p,o={}){
+  const h={'Content-Type':'application/json','Authorization':'Bearer '+token};
+  const r=await fetch(API+'/api/modules/profiler/'+p,{...o,headers:h});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d;
+}
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
 
-        async function fetchJson(path) {
-            const r = await fetch(BASE + path, { credentials: 'include', headers: authHeaders() });
-            if (!r.ok) throw new Error(r.statusText);
-            return r.json();
-        }
+let selectedServer=null, servers={}, tpsHistory={}, msptHistory={};
+const MAX_HIST=30;
+let firstRender=true;
+function anim(cls){return firstRender?cls:'';}
 
-        function tpsClass(v) { return v >= 19.5 ? 'good' : v >= 17 ? 'warn' : 'bad'; }
-        function cpuClass(v) { return v < 50 ? 'good' : v < 80 ? 'warn' : 'bad'; }
-        function msptClass(v) { return v < 40 ? 'good' : v < 50 ? 'warn' : 'bad'; }
 
-        async function render() {
-            try {
-                const targetRes = await fetchJson('targets');
-                const targets = targetRes.servers || [];
-                const { servers } = await fetchJson('servers');
+async function render(){
+  try{
+    const status=await api('status');
+    const srvResp=await api('servers');
+    const srvList=srvResp.servers||[];
 
-                if (!targets || targets.length === 0) {
-                    document.getElementById('app').innerHTML = '<div class="no-data">No connected extenders yet. Start the Paper Extender first.</div>';
-                    return;
-                }
-                if (!currentServer || !targets.find(s => s.name === currentServer)) {
-                    currentServer = targets[0].name;
-                }
+    // Also fetch targets for deploy section
+    let targets=[];
+    try{const tResp=await api('targets');targets=tResp.servers||[];}catch(e){}
 
-                let html = renderTargets(targets);
+    if(!srvList.length){
+      // No profiling data — show status + deploy section
+      let noDataHtml=`<div class="stats-grid ${anim('slide-up')}">
+        <div class="stat-card"><div class="stat-label">Status</div><div class="stat-value hl">${status.enabled?'Active':'Disabled'}</div></div>
+        <div class="stat-card"><div class="stat-label">Servers</div><div class="stat-value">0</div></div>
+        <div class="stat-card"><div class="stat-label">Sample Interval</div><div class="stat-value">${status.sample_interval_ms||50}ms</div></div>
+      </div>`;
+      noDataHtml+=buildDeploySection(targets);
+      noDataHtml+=`<div class="no-data ${anim('slide-up')}" style="animation-delay:.1s">
+        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        <p>No servers are currently reporting profiling data.<br>Deploy the profiler extender to a Paper server using the extend buttons above.</p>
+      </div>`;
+      document.getElementById('app').innerHTML=noDataHtml;
+      firstRender=false;
+      return;
+    }
 
-                if (!servers || !servers.find(s => s.name === currentServer)) {
-                    html += '<div class="no-data">Profiler is not extended on this server yet, or data has not arrived. Click <b>Extend Profiler</b> above.</div>';
-                    document.getElementById('app').innerHTML = html;
-                    drawPlaceholder('No flame data');
-                    return;
-                }
+    if(!selectedServer||!srvList.find(s=>s.name===selectedServer))selectedServer=srvList[0].name;
 
-                html += '<div class="server-tabs">';
-                for (const s of servers) {
-                    html += `<div class="server-tab ${s.name === currentServer ? 'active' : ''}" onclick="selectServer('${s.name}')">${s.name}</div>`;
-                }
-                html += '</div>';
+    // Build tabs
+    let tabs=`<div class="server-tabs ${anim('fade-in')}">`;
+    srvList.forEach(s=>{
+      tabs+=`<div class="server-tab ${s.name===selectedServer?'active':''}" onclick="selectServer('${esc(s.name)}')">`+
+        `<span class="tab-dot"></span>${esc(s.name)}</div>`;
+    });
+    tabs+='</div>';
 
-                const detail = await fetchJson('server/' + encodeURIComponent(currentServer));
-                html += renderDetail(detail);
-                document.getElementById('app').innerHTML = html;
-                await renderFlameGraph(detail);
-            } catch (e) {
-                document.getElementById('app').innerHTML = `<div class="no-data">Error: ${e.message}</div>`;
-            }
-        }
+    // Get detail for selected
+    const detail=await api('server/'+encodeURIComponent(selectedServer));
+    const srv=srvList.find(s=>s.name===selectedServer)||{};
 
-        function renderDetail(d) {
-            let html = '<div class="grid">';
-            // TPS card
-            html += `<div class="card"><h2>TPS</h2>
-                <div class="stat"><span class="stat-label">10s</span><span class="stat-value ${tpsClass(d.tps_10s)}">${d.tps_10s}</span></div>
-                <div class="stat"><span class="stat-label">1m</span><span class="stat-value ${tpsClass(d.tps_1m)}">${d.tps_1m}</span></div>
-                <div class="stat"><span class="stat-label">5m</span><span class="stat-value ${tpsClass(d.tps_5m)}">${d.tps_5m}</span></div>
-            </div>`;
+    // Track history
+    if(!tpsHistory[selectedServer])tpsHistory[selectedServer]=[];
+    if(!msptHistory[selectedServer])msptHistory[selectedServer]=[];
+    tpsHistory[selectedServer].push(detail.tps||srv.tps||0);
+    msptHistory[selectedServer].push(detail.mspt||srv.mspt||0);
+    if(tpsHistory[selectedServer].length>MAX_HIST)tpsHistory[selectedServer].shift();
+    if(msptHistory[selectedServer].length>MAX_HIST)msptHistory[selectedServer].shift();
 
-            // MSPT card
-            html += `<div class="card"><h2>MSPT (ms/tick)</h2>
-                <div class="stat"><span class="stat-label">Mean</span><span class="stat-value ${msptClass(d.mspt_mean)}">${d.mspt_mean}</span></div>
-                <div class="stat"><span class="stat-label">Min</span><span class="stat-value">${d.mspt_min}</span></div>
-                <div class="stat"><span class="stat-label">Max</span><span class="stat-value ${msptClass(d.mspt_max)}">${d.mspt_max}</span></div>
-                <div class="stat"><span class="stat-label">P95</span><span class="stat-value ${msptClass(d.mspt_p95)}">${d.mspt_p95}</span></div>
-            </div>`;
+    const tps=detail.tps||srv.tps||0;
+    const mspt=detail.mspt||srv.mspt||0;
+    const cpu=(detail.cpu!==undefined?detail.cpu:srv.cpu)||0;
+    const memUsed=detail.memory_used_mb||srv.memory_used_mb||0;
+    const memMax=detail.memory_max_mb||srv.memory_max_mb||0;
+    const memPct=memMax>0?Math.round(memUsed/memMax*100):0;
+    const tpsCls=tps>=19?'good':tps>=15?'warn':'bad';
+    const msptCls=mspt<=30?'good':mspt<=45?'warn':'bad';
+    const cpuCls=cpu<60?'good':cpu<80?'warn':'bad';
+    const memCls=memPct<70?'good':memPct<85?'warn':'bad';
 
-            // CPU card
-            html += `<div class="card"><h2>CPU</h2>
-                <div class="stat"><span class="stat-label">System</span><span class="stat-value ${cpuClass(d.system_cpu)}">${d.system_cpu}%</span></div>
-                <div class="stat"><span class="stat-label">JVM Process</span><span class="stat-value ${cpuClass(d.process_cpu)}">${d.process_cpu}%</span></div>
-            </div>`;
+    let html=tabs;
+    // Stat cards
+    html+=`<div class="stats-grid ${anim('slide-up')}">
+      <div class="stat-card"><div class="stat-label">TPS</div><div class="stat-value ${tpsCls}">${tps.toFixed(1)}</div></div>
+      <div class="stat-card"><div class="stat-label">MSPT</div><div class="stat-value ${msptCls}">${mspt.toFixed(1)}ms</div></div>
+      <div class="stat-card"><div class="stat-label">CPU</div><div class="stat-value ${cpuCls}">${cpu>=0?cpu.toFixed(1)+'%':'N/A'}</div></div>
+      <div class="stat-card"><div class="stat-label">Memory</div><div class="stat-value ${memCls}">${memUsed}<span style="font-size:12px;color:var(--dim)">/${memMax} MB</span></div></div>
+      <div class="stat-card"><div class="stat-label">Heap Usage</div><div class="stat-value">${memPct}%</div></div>
+      <div class="stat-card"><div class="stat-label">Players</div><div class="stat-value hl">${detail.players||srv.players||0}</div></div>
+    </div>`;
 
-            // Memory card
-            const memPct = d.heap_max_mb > 0 ? Math.round(d.heap_used_mb / d.heap_max_mb * 100) : 0;
-            html += `<div class="card"><h2>Memory</h2>
-                <div class="stat"><span class="stat-label">Heap</span><span class="stat-value">${d.heap_used_mb} / ${d.heap_max_mb} MB</span></div>
-                <div class="bar"><div class="bar-fill" style="width:${memPct}%"></div></div>
-                <div class="stat" style="margin-top:8px"><span class="stat-label">GC Collections</span><span class="stat-value">${d.gc_collections || 0}</span></div>
-                <div class="stat"><span class="stat-label">GC Time</span><span class="stat-value">${d.gc_time_ms || 0} ms</span></div>
-                <div class="stat"><span class="stat-label">GC / min</span><span class="stat-value">${d.gc_frequency_per_min || 0}</span></div>
-                <div class="stat"><span class="stat-label">Avg GC Pause</span><span class="stat-value">${d.gc_avg_pause_ms || 0} ms</span></div>
-            </div>`;
+    // Mini charts
+    html+=`<div class="charts-grid ${anim('slide-up')}" style="animation-delay:.05s">
+      <div class="chart-card"><h3>TPS History</h3><canvas id="tpsChart" height="80"></canvas></div>
+      <div class="chart-card"><h3>MSPT History</h3><canvas id="msptChart" height="80"></canvas></div>
+    </div>`;
 
-            // Sampler card
-            html += `<div class="card"><h2>Sampler</h2>
-                <div class="stat"><span class="stat-label">Sample interval</span><span class="stat-value">${d.sample_interval_ms || 0} ms</span></div>
-                <div class="stat"><span class="stat-label">Report interval</span><span class="stat-value">${d.report_interval_sec || 0} s</span></div>
-                <div class="stat"><span class="stat-label">Window samples</span><span class="stat-value">${d.total_samples || 0}</span></div>
-                <div class="stat"><span class="stat-label">Cumulative samples</span><span class="stat-value">${d.cumulative_samples || 0}</span></div>
-            </div>`;
-            html += '</div>';
+    // Deploy Extender Section
+    html+=buildDeploySection(targets);
 
-            // Per-plugin CPU
-            if (d.plugin_cpu && Object.keys(d.plugin_cpu).length > 0) {
-                html += '<div class="card" style="margin-bottom:16px"><h2>Per-Plugin CPU Usage</h2><table><tr><th>Plugin</th><th>CPU %</th><th></th></tr>';
-                const sorted = Object.entries(d.plugin_cpu).sort((a,b) => b[1] - a[1]);
-                for (const [name, pct] of sorted) {
-                    html += `<tr><td>${name}</td><td>${pct}%</td><td><div class="bar"><div class="bar-fill" style="width:${Math.min(pct, 100)}%"></div></div></td></tr>`;
-                }
-                html += '</table></div>';
-            }
+    // Actions
+    html+=`<div class="actions ${anim('slide-up')}" style="animation-delay:.08s">
+      <button class="btn" onclick="render()">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>`;
 
-            // Top methods
-            if (d.top_methods && d.top_methods.length > 0) {
-                html += '<div class="card" style="margin-bottom:16px"><h2>Top Sampled Methods (' + (d.total_samples || 0) + ' samples / ' + (d.cumulative_samples || 0) + ' total)</h2>';
-                html += '<table><tr><th>Method</th><th>Plugin</th><th>Samples</th><th>%</th></tr>';
-                for (const m of d.top_methods) {
-                    const shortMethod = m.method.length > 60 ? '…' + m.method.slice(-57) : m.method;
-                    html += `<tr><td title="${m.method}" style="font-family:monospace;font-size:0.85em">${shortMethod}</td><td>${m.plugin}</td><td>${m.samples}</td><td>${m.percent}%</td></tr>`;
-                }
-                html += '</table></div>';
-            }
+    // Top Plugins (Spark-like attribution)
+    const pluginData=detail.hot_method_tree;
+    if(pluginData && pluginData.plugins && pluginData.plugins.length){
+      html+=`<div class="card ${anim('slide-up')}" style="animation-delay:.1s">
+        <h3><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7H7.01"/></svg>Top Plugins / Subsystems</h3>
+        <table><thead><tr><th>Name</th><th>CPU %</th><th>Samples</th><th>Impact</th></tr></thead><tbody>`;
+      pluginData.plugins.forEach(p=>{
+        const isInfra=p.is_infrastructure;
+        const color=isInfra?'var(--accent)':(p.percent>10?'var(--red)':p.percent>5?'var(--amber)':'var(--green)');
+        html+=`<tr><td style="font-weight:600">${esc(p.name)}</td>
+          <td style="color:${color};font-weight:600">${p.percent.toFixed(1)}%</td>
+          <td>${p.samples}</td>
+          <td><div class="tree-bar"><div class="tree-bar-fill" style="width:${Math.min(p.percent*2,100)}%;background:${color}"></div></div></td></tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    }
 
-            if (d.gc_collectors && d.gc_collectors.length > 0) {
-                html += '<div class="card" style="margin-bottom:16px"><h2>GC Collectors</h2><table><tr><th>Name</th><th>Total</th><th>Time</th><th>/ min</th><th>Avg Pause</th></tr>';
-                for (const gc of d.gc_collectors) {
-                    html += `<tr><td>${gc.name}</td><td>${gc.collections}</td><td>${gc.collection_time_ms} ms</td><td>${gc.frequency_per_min}</td><td>${gc.avg_pause_ms} ms</td></tr>`;
-                }
-                html += '</table></div>';
-            }
+    // Sample Tree (Plugins -> Classes -> Methods)
+    const hotTree=detail.hot_method_tree;
+    const topMethods=detail.top_methods||[];
 
-            // Flame graph button
-            html += '<div class="actions">';
-            html += '<button class="btn" onclick="requestFlame()">🔥 Generate Flame Graph</button>';
-            html += '<button class="btn secondary" onclick="resetFlameZoom()">Reset Flame Zoom</button>';
-            if (d.flame_graph_available) {
-                html += `<a class="btn secondary" href="${BASE}server/${encodeURIComponent(currentServer)}/flamegraph" target="_blank" rel="noopener">View Raw Flame JSON</a>`;
-            }
-            html += '</div>';
+    html+=`<div class="card ${anim('slide-up')}" style="animation-delay:.12s">
+      <h3><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Sample Tree (Plugins/Subsystems)</h3>`;
 
-            html += `<div class="card" id="flameCard" style="margin-bottom:16px">
-                <h2>Flame Graph</h2>
-                <div class="flame-hint">Click a frame to zoom in. Hover to inspect stack weight.</div>
-                <div class="flame-wrap">
-                    <canvas id="flameCanvas" height="260"></canvas>
-                    <div class="flame-tip" id="flameTip"></div>
-                </div>
-                <div class="flame-meta" id="flameMeta">No flame graph loaded yet.</div>
-            </div>`;
+    if(hotTree && hotTree.plugins && hotTree.plugins.length){
+      html+=`<div class="filters">
+        <input type="text" id="treeFilter" placeholder="Filter classes/methods..." oninput="filterTree()">
+        <label><input type="checkbox" id="hideJava" onchange="filterTree()||renderHotTree(hotTree)" checked> Hide Server/JVM Subsystems</label>
+        <button class="collapse-all-btn" onclick="collapseAll()">Collapse All</button>
+        <button class="collapse-all-btn" onclick="expandAll()">Expand All</button>
+      </div>
+      <div class="method-tree" id="methodTree"></div>`;
+    } else if(topMethods.length){
+      html+=`<table><thead><tr><th>Method</th><th>Samples</th><th>%</th><th>Impact</th></tr></thead><tbody>`;
+      topMethods.forEach(m=>{
+        const pct=m.percentage||0;
+        const color=pct>10?'var(--red)':pct>5?'var(--amber)':'var(--accent)';
+        html+=`<tr><td style="font-family:var(--mono);font-size:11px">${esc(m.method||m.name||'?')}</td>
+          <td>${m.count||m.samples||0}</td><td style="font-weight:600;color:${color}">${pct.toFixed(1)}%</td>
+          <td><div class="tree-bar"><div class="tree-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${color}"></div></div></td></tr>`;
+      });
+      html+=`</tbody></table>`;
+    } else {
+      html+=`<div style="color:var(--muted);font-size:12px;padding:16px 0">No plugin profiling data yet. Wait for the next report.</div>`;
+    }
+    html+=`</div>`;
 
-            return html;
-        }
+    // GC Stats
+    const gc=detail.gc;
+    if(gc&&(gc.collectors||gc.young_gc_count!==undefined)){
+      html+=`<div class="card ${anim('slide-up')}" style="animation-delay:.15s"><h3><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>Garbage Collection</h3>`;
+      if(gc.collectors&&gc.collectors.length){
+        html+=`<table><thead><tr><th>Collector</th><th>Collections</th><th>Total Time</th><th>Avg Time</th></tr></thead><tbody>`;
+        gc.collectors.forEach(c=>{
+          const avg=c.count>0?(c.time_ms/c.count).toFixed(1):'0';
+          html+=`<tr><td>${esc(c.name)}</td><td>${c.count}</td><td>${c.time_ms}ms</td><td>${avg}ms</td></tr>`;
+        });
+        html+=`</tbody></table>`;
+      } else {
+        html+=`<div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Young GC</div><div class="stat-value">${gc.young_gc_count||0} <span style="font-size:12px;color:var(--dim)">(${gc.young_gc_time_ms||0}ms)</span></div></div>
+          <div class="stat-card"><div class="stat-label">Old GC</div><div class="stat-value">${gc.old_gc_count||0} <span style="font-size:12px;color:var(--dim)">(${gc.old_gc_time_ms||0}ms)</span></div></div>
+        </div>`;
+      }
+      html+=`</div>`;
+    }
 
-        function renderTargets(targets) {
-            let html = '<div class="card" style="margin-bottom:16px"><h2>Connected Paper Servers</h2><table><tr><th>Server</th><th>Status</th><th>Players</th><th>TPS</th><th>Action</th></tr>';
-            for (const t of targets) {
-                const extended = !!t.extended;
-                const status = extended ? 'Profiler Extended' : 'Not Extended';
-                const action = extended
-                    ? '<span class="btn secondary">Extended</span>'
-                    : `<button class="btn" onclick="extendServer('${t.name}')">Extend Profiler</button>`;
-                html += `<tr>
-                    <td>${t.name}</td>
-                    <td>${status}</td>
-                    <td>${t.players || 0}</td>
-                    <td>${typeof t.tps === 'number' ? t.tps : 0}</td>
-                    <td>${action}</td>
-                </tr>`;
-            }
-            html += '</table></div>';
-            return html;
-        }
+    const appEl = document.getElementById('app');
+    const scrollY = window.scrollY;
+    appEl.style.minHeight = appEl.clientHeight + 'px';
+    appEl.innerHTML=html;
 
-        function selectServer(name) { currentServer = name; render(); }
+    // Draw charts
+    setTimeout(()=>{
+      drawSparkline('tpsChart',tpsHistory[selectedServer]||[],{color:'#22d3a7',max:20});
+      drawSparkline('msptChart',msptHistory[selectedServer]||[],{color:'#3b82f6',warnLine:50});
+      if(hotTree)renderHotTree(hotTree);
+      
+      // Cleanup scroll fix
+      appEl.style.minHeight = '';
+      if (scrollY > 0) window.scrollTo(0, scrollY);
+    },50);
+    firstRender=false;
 
-        async function requestFlame() {
-            try {
-                await fetch(BASE + 'request-flame/' + encodeURIComponent(currentServer), {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: authHeaders()
-                });
-                alert('Flame graph generation requested. Refresh in a few seconds.');
-            } catch (e) { alert('Error: ' + e.message); }
-        }
+  }catch(e){
+    document.getElementById('app').innerHTML=`<div class="no-data"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg>${esc(e.error||e.message||'Failed to load profiling data')}</div>`;
+    firstRender=false;
+  }
+}
 
-        async function extendServer(name) {
-            try {
-                const res = await fetch(BASE + 'extend/' + encodeURIComponent(name), {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: authHeaders()
-                });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body.error || res.statusText);
-                }
-                alert('Profiler extension requested for ' + name + '.');
-                await render();
-            } catch (e) {
-                alert('Failed to extend server: ' + e.message);
-            }
-        }
+function selectServer(name){selectedServer=name;render();}
 
-        function resetFlameZoom() {
-            flameState.zoomPath = [];
-            redrawFlame();
-        }
+// ── Deploy Extender Section ──
+function buildDeploySection(targets){
+  if(!targets||!targets.length)return '';
+  let html=`<div class="card ${anim('slide-up')}" style="animation-delay:.07s">
+    <h3><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Deploy Profiler Extender</h3>
+    <table><thead><tr><th>Server</th><th>Status</th><th>Data</th><th>Action</th></tr></thead><tbody>`;
+  targets.forEach(t=>{
+    const extended=t.extended;
+    const hasData=t.has_data;
+    const name=t.name||t.extender_id||'?';
+    const id=t.identifier||t.extender_id||name;
+    html+=`<tr>
+      <td style="font-weight:600">${esc(name)}</td>
+      <td>${extended?'<span style="color:var(--green)">Extended</span>':'<span style="color:var(--dim)">Not Extended</span>'}</td>
+      <td>${hasData?'<span style="color:var(--green)">Receiving</span>':'<span style="color:var(--dim)">No data</span>'}</td>
+      <td><button class="btn${extended?' secondary':' primary'}" onclick="extendServer('${esc(id)}',this)" ${extended?'':''}>${extended?'Re-Extend':'Extend'}</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  return html;
+}
 
-        async function renderFlameGraph(detail) {
-            const meta = document.getElementById('flameMeta');
-            if (!meta) return;
+async function extendServer(name,btn){
+  if(btn){btn.disabled=true;btn.textContent='Deploying...';}
+  try{
+    await api('extend/'+encodeURIComponent(name),{method:'POST'});
+    if(btn){btn.textContent='\u2713 Deployed';btn.className='btn secondary';}
+    setTimeout(render,2000);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Failed';btn.style.color='var(--red)';}
+    alert(e.error||'Failed to extend');
+  }
+}
 
-            if (!detail.flame_graph_available) {
-                flameState.tree = null;
-                meta.textContent = 'No flame graph available for this server yet. Generate one first.';
-                drawPlaceholder('No flame data');
-                return;
-            }
+// ── Sparkline Chart ──
+function drawSparkline(id,data,opts={}){
+  const canvas=document.getElementById(id);if(!canvas||data.length<2)return;
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.parentElement.clientWidth-32,h=80;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+  ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
 
-            const update = detail.last_flame_graph_update || 0;
-            if (flameState.server === currentServer && flameState.updatedAt === update && flameState.tree) {
-                redrawFlame();
-                return;
-            }
+  let max=Math.max(...data,1);if(opts.max)max=Math.max(max,opts.max);
+  const pad=4,gw=w-pad*2,gh=h-pad*2;
 
-            try {
-                const flame = await fetchJson('server/' + encodeURIComponent(currentServer) + '/flamegraph');
-                const stacks = flame.stacks || [];
-                flameState.tree = buildFlameTree(stacks);
-                flameState.server = currentServer;
-                flameState.updatedAt = update;
-                flameState.zoomPath = [];
-                redrawFlame();
-            } catch (e) {
-                flameState.tree = null;
-                meta.textContent = 'Failed to load flame graph data: ' + e.message;
-                drawPlaceholder('Failed to load flame data');
-            }
-        }
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
+  for(let i=0;i<4;i++){const y=pad+gh*(i/3);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(pad+gw,y);ctx.stroke();}
 
-        function buildFlameTree(stacks) {
-            const root = { name: '(root)', value: 0, children: new Map() };
-            for (const entry of stacks) {
-                const stack = (entry.stack || '').split(';').filter(Boolean);
-                const count = Number(entry.count || 0);
-                if (!stack.length || count <= 0) continue;
-                root.value += count;
+  if(opts.warnLine){
+    const y=pad+gh*(1-opts.warnLine/max);
+    ctx.strokeStyle='rgba(244,63,94,.2)';ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(pad+gw,y);ctx.stroke();ctx.setLineDash([]);
+  }
 
-                let node = root;
-                for (const frame of stack) {
-                    if (!node.children.has(frame)) {
-                        node.children.set(frame, { name: frame, value: 0, children: new Map() });
-                    }
-                    node = node.children.get(frame);
-                    node.value += count;
-                }
-            }
-            return root;
-        }
+  // Fill
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*gw;const y=pad+gh*(1-v/max);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(pad+gw,pad+gh);ctx.lineTo(pad,pad+gh);ctx.closePath();
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  const c=opts.color||'#22d3a7';
+  grad.addColorStop(0,c+'30');grad.addColorStop(1,c+'05');
+  ctx.fillStyle=grad;ctx.fill();
 
-        function redrawFlame() {
-            if (!flameState.tree) {
-                drawPlaceholder('No flame data');
-                return;
-            }
+  // Line
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*gw;const y=pad+gh*(1-v/max);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=c;ctx.lineWidth=2;ctx.stroke();
 
-            const canvas = document.getElementById('flameCanvas');
-            const meta = document.getElementById('flameMeta');
-            const tip = document.getElementById('flameTip');
-            if (!canvas || !meta || !tip) return;
+  // Dot
+  const lx=pad+gw,ly=pad+gh*(1-data[data.length-1]/max);
+  ctx.beginPath();ctx.arc(lx,ly,3,0,Math.PI*2);ctx.fillStyle=c;ctx.fill();
 
-            const view = findNodeByPath(flameState.tree, flameState.zoomPath) || flameState.tree;
-            meta.textContent = `Server: ${currentServer} | Total samples: ${view.value} | Zoom: ${flameState.zoomPath.length ? flameState.zoomPath.join(' > ') : '(root)'}`;
+  // Label
+  ctx.fillStyle=c;ctx.font='bold 12px Inter,sans-serif';
+  ctx.fillText(data[data.length-1].toFixed(1),4,14);
+}
 
-            const flat = [];
-            const levels = [];
-            flatten(view, 0, levels);
-            const depth = Math.max(1, levels.length);
-            const rowH = 20;
-            const h = Math.max(220, depth * rowH + 8);
+// ── Hot Method Tree Rendering ──
+let openNodes = new Set();
+let totalSamples = 1;
 
-            const wCss = canvas.parentElement.clientWidth;
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.max(1, Math.floor(wCss * dpr));
-            canvas.height = Math.max(1, Math.floor(h * dpr));
-            canvas.style.height = h + 'px';
+function renderHotTree(hot_method_tree){
+  const el = document.getElementById('methodTree');
+  if(!el || !hot_method_tree || !hot_method_tree.plugins) return;
+  
+  const plugins = hot_method_tree.plugins;
+  let maxSamples = 0;
+  plugins.forEach(p => maxSamples += p.samples);
+  totalSamples = maxSamples || 1;
+  const hideJava = document.getElementById('hideJava')?.checked ?? true;
+  
+  let html = '';
+  plugins.forEach(p => {
+    if (hideJava && p.is_infrastructure) return;
+    html += renderPluginNode(p);
+  });
+  el.innerHTML = html || '<div style="color:var(--dim);padding:10px">No matching subsystems found.</div>';
+}
 
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, wCss, h);
+function renderPluginNode(p) {
+  const id = 'plug_' + p.name.replace(/[^a-zA-Z0-9]/g,'_');
+  const pct = (p.samples/totalSamples)*100;
+  const barColor = p.is_infrastructure ? 'var(--accent)' : (pct>20?'var(--red)':pct>10?'var(--amber)':'var(--green)');
+  const isOpen = openNodes.has(id);
+  
+  let html = `<div class="tree-row" onclick="toggleNode('${id}')" data-name="${esc(p.name).toLowerCase()}">
+    <span class="tree-toggle ${p.classes&&p.classes.length?'':'leaf'} ${isOpen?'open':''}" id="tog_${id}">▸</span>
+    <div class="tree-bar"><div class="tree-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${barColor}"></div></div>
+    <span class="tree-name" style="font-weight:700">${esc(p.name)}</span>
+    <span class="tree-pct" style="color:${barColor}">${pct.toFixed(1)}%</span>
+    <span class="tree-samples">${p.samples} samples</span>
+  </div>`;
+  
+  if (p.classes && p.classes.length) {
+    html += `<div class="tree-children ${isOpen?'':'collapsed'}" id="ch_${id}">`;
+    p.classes.forEach(c => { html += `<div class="tree-node">${renderClassNode(c, p.name)}</div>`; });
+    html += `</div>`;
+  }
+  return html;
+}
 
-            drawNodes(ctx, view, 0, 0, wCss, rowH, flat, flameState.zoomPath);
+function renderClassNode(c, pluginName) {
+  const id = 'cls_' + (pluginName+'_'+c.name).replace(/[^a-zA-Z0-9]/g,'_');
+  const pct = (c.samples/totalSamples)*100;
+  const barColor = pct>10?'var(--amber)':'var(--dim)';
+  const isOpen = openNodes.has(id);
+  const pkg = c.name.includes('.') ? c.name.substring(0, c.name.lastIndexOf('.')) : '';
+  const cls = c.name.includes('.') ? c.name.substring(c.name.lastIndexOf('.')+1) : c.name;
+  
+  let html = `<div class="tree-row" onclick="toggleNode('${id}')" data-name="${esc(c.name).toLowerCase()}">
+    <span class="tree-toggle ${c.methods&&c.methods.length?'':'leaf'} ${isOpen?'open':''}" id="tog_${id}">▸</span>
+    <div class="tree-bar"><div class="tree-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${barColor}"></div></div>
+    <span class="tree-name">${pkg?`<span class="pkg">${esc(pkg)}.</span>`:''}<span class="cls">${esc(cls)}</span></span>
+    <span class="tree-pct" style="color:var(--text)">${pct.toFixed(1)}%</span>
+    <span class="tree-samples">${c.samples}</span>
+  </div>`;
 
-            canvas.onmousemove = (ev) => {
-                const r = canvas.getBoundingClientRect();
-                const x = ev.clientX - r.left;
-                const y = ev.clientY - r.top;
-                const hit = flat.find(n => x >= n.x && x <= n.x + n.w && y >= n.y && y <= n.y + n.h);
-                if (!hit) {
-                    tip.style.display = 'none';
-                    return;
-                }
-                const pct = view.value > 0 ? ((hit.value * 100) / view.value).toFixed(2) : '0.00';
-                tip.style.display = 'block';
-                tip.style.left = Math.min(wCss - 250, x + 12) + 'px';
-                tip.style.top = Math.max(8, y - 38) + 'px';
-                tip.innerHTML = `<b>${escapeHtml(hit.name)}</b><br>${hit.value} samples (${pct}%)`;
-            };
+  if (c.methods && c.methods.length) {
+    html += `<div class="tree-children ${isOpen?'':'collapsed'}" id="ch_${id}">`;
+    c.methods.forEach(m => { html += `<div class="tree-node">${renderMethodNode(m, id)}</div>`; });
+    html += `</div>`;
+  }
+  return html;
+}
 
-            canvas.onmouseleave = () => { tip.style.display = 'none'; };
-            canvas.onclick = (ev) => {
-                const r = canvas.getBoundingClientRect();
-                const x = ev.clientX - r.left;
-                const y = ev.clientY - r.top;
-                const hit = flat.find(n => x >= n.x && x <= n.x + n.w && y >= n.y && y <= n.y + n.h);
-                if (!hit) return;
-                flameState.zoomPath = hit.path;
-                redrawFlame();
-            };
-        }
+function renderMethodNode(m, parentId) {
+  const id = 'mtd_' + (parentId+'_'+m.name).replace(/[^a-zA-Z0-9]/g,'_');
+  const pct = (m.samples/totalSamples)*100;
+  const barColor = pct>5?'var(--accent)':'var(--dim)';
+  
+  return `<div class="tree-row leaf" data-name="${esc(m.full_name||m.name).toLowerCase()}">
+    <span class="tree-toggle leaf">▸</span>
+    <div class="tree-bar"><div class="tree-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${barColor}"></div></div>
+    <span class="tree-name"><span class="mtd">${esc(m.name)}()</span></span>
+    <span class="tree-pct" style="color:var(--text)">${pct.toFixed(1)}%</span>
+    <span class="tree-samples">${m.samples}</span>
+  </div>`;
+}
 
-        function drawNodes(ctx, node, depth, x, width, rowH, out, path) {
-            if (!node.children || node.children.size === 0) return;
-            const y = depth * rowH;
-            let curX = x;
+function toggleNode(id){
+  const ch=document.getElementById('ch_'+id);
+  const tog=document.getElementById('tog_'+id);
+  if(!ch)return;
+  ch.classList.toggle('collapsed');
+  const isCollapsed = ch.classList.contains('collapsed');
+  if(tog)tog.classList.toggle('open',!isCollapsed);
+  if(isCollapsed) openNodes.delete(id); else openNodes.add(id);
+}
 
-            const children = Array.from(node.children.values()).sort((a, b) => b.value - a.value);
-            for (const child of children) {
-                const w = node.value > 0 ? (child.value / node.value) * width : 0;
-                if (w <= 0.8) {
-                    curX += w;
-                    continue;
-                }
-                const hue = hashHue(child.name);
-                ctx.fillStyle = `hsl(${hue} 70% 50%)`;
-                ctx.fillRect(curX, y, w, rowH - 1);
-                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-                ctx.strokeRect(curX + 0.5, y + 0.5, Math.max(0, w - 1), rowH - 2);
+function collapseAll(){
+  document.querySelectorAll('.tree-children').forEach(el=>el.classList.add('collapsed'));
+  document.querySelectorAll('.tree-toggle').forEach(el=>el.classList.remove('open'));
+  openNodes.clear();
+}
+function expandAll(){
+  document.querySelectorAll('.tree-children').forEach(el=>{
+    el.classList.remove('collapsed');
+    const id = el.id.replace('ch_','');
+    openNodes.add(id);
+  });
+  document.querySelectorAll('.tree-toggle:not(.leaf)').forEach(el=>el.classList.add('open'));
+}
 
-                if (w > 70) {
-                    ctx.fillStyle = '#fff';
-                    ctx.font = '11px monospace';
-                    const label = child.name.length > 46 ? '...' + child.name.slice(-43) : child.name;
-                    ctx.fillText(label, curX + 4, y + 13);
-                }
+function filterTree(){
+  const q=(document.getElementById('treeFilter')?.value||'').toLowerCase();
+  document.querySelectorAll('.tree-row').forEach(row=>{
+    const name=row.dataset.name||'';
+    row.style.display = (q && !name.includes(q)) ? 'none' : '';
+  });
+}
 
-                const childPath = path.concat(child.name);
-                out.push({ x: curX, y, w, h: rowH - 1, name: child.name, value: child.value, path: childPath });
-                drawNodes(ctx, child, depth + 1, curX, w, rowH, out, childPath);
-                curX += w;
-            }
-        }
-
-        function flatten(node, depth, levels) {
-            if (!node.children || node.children.size === 0) return;
-            levels[depth] = true;
-            for (const child of node.children.values()) flatten(child, depth + 1, levels);
-        }
-
-        function findNodeByPath(root, path) {
-            let node = root;
-            for (const part of path) {
-                if (!node.children || !node.children.has(part)) return null;
-                node = node.children.get(part);
-            }
-            return node;
-        }
-
-        function drawPlaceholder(text) {
-            const canvas = document.getElementById('flameCanvas');
-            if (!canvas) return;
-            const w = canvas.parentElement.clientWidth;
-            const h = 260;
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.max(1, Math.floor(w * dpr));
-            canvas.height = Math.max(1, Math.floor(h * dpr));
-            canvas.style.height = h + 'px';
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, w, h);
-            ctx.fillStyle = '#7d8396';
-            ctx.font = '13px monospace';
-            ctx.fillText(text, 12, 24);
-        }
-
-        function hashHue(value) {
-            let h = 0;
-            for (let i = 0; i < value.length; i++) h = ((h << 5) - h) + value.charCodeAt(i);
-            return Math.abs(h) % 360;
-        }
-
-        function escapeHtml(s) {
-            return String(s)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        render();
-        setInterval(render, 10000);
-    </script>
+// ── Init ──
+setTimeout(render, 100);
+setInterval(render,10000);
+</script>
 </body>
 </html>
-

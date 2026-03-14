@@ -1,0 +1,10 @@
+{
+  "id": "anti-bot",
+  "name": "Anti-Bot",
+  "version": "1.0.0",
+  "description": "Comprehensive bot detection: rate limiting, flood detection, bot heuristics, handshake validation, SYN flood detection, dynamic blocking, and CAPTCHA.",
+  "author": "ErikRadovan",
+  "main": "dev.erikradovan.antibot.AntiBotModule",
+  "dashboard": "web/"
+}
+

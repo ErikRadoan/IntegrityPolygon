@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Server Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0f1a;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--radius:10px;--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);padding:20px;font-size:14px}
+.grid{display:grid;gap:16px;margin-bottom:16px}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.grid-2{grid-template-columns:1fr 1fr}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card h3{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.stat{font-size:28px;font-weight:700;font-family:var(--mono)}
+.stat-label{font-size:11px;color:var(--dim);margin-top:2px}
+.stat.green{color:var(--green)}.stat.amber{color:var(--amber)}.stat.red{color:var(--red)}
+.server-card{cursor:pointer;transition:border-color .2s}
+.server-card:hover{border-color:var(--accent)}
+.server-card.selected{border-color:var(--accent);box-shadow:0 0 12px rgba(34,211,167,.1)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px;color:var(--dim);border-bottom:1px solid var(--border);font-weight:500}
+td{padding:8px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.spike{color:var(--red)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.tag-warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.tag-ok{background:rgba(34,197,94,.1);color:var(--green)}
+.tag-crit{background:rgba(244,63,94,.1);color:var(--red)}
+canvas{width:100%;height:100px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:4px}
+.field input{width:100%;padding:8px 12px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;background:var(--accent);color:#000}
+.btn:hover{filter:brightness(1.1)}
+h2{font-size:22px;margin-bottom:4px}
+.subtitle{color:var(--dim);font-size:13px;margin-bottom:20px}
+@media(max-width:768px){.grid-2,.grid-4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h2>Server Monitor</h2>
+<p class="subtitle">Real-time backend performance profiling and lag detection</p>
+
+<div class="grid grid-4" id="statsRow">
+  <div class="card"><h3>Servers</h3><div class="stat" id="srvCount">-</div></div>
+  <div class="card"><h3>Avg TPS</h3><div class="stat" id="avgTps">-</div></div>
+  <div class="card"><h3>Total Players</h3><div class="stat" id="totalPlayers">-</div></div>
+  <div class="card"><h3>Lag Spikes</h3><div class="stat" id="lagSpikes">-</div></div>
+</div>
+
+<div class="grid grid-2">
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <h3>Backend Servers</h3>
+      <div id="serverList"><em style="color:var(--dim)">Waiting for data...</em></div>
+    </div>
+    <div class="card">
+      <h3>Recent Lag Spikes</h3>
+      <div id="spikeList"><em style="color:var(--dim)">No lag spikes detected</em></div>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <h3>Server Detail — <span id="detailName">select a server</span></h3>
+      <canvas id="tpsChart" height="100"></canvas>
+      <div id="detailStats" style="margin-top:10px"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h3>Top Expensive Chunks</h3>
+      <div id="chunkTable"><em style="color:var(--dim)">Select a server</em></div>
+    </div>
+    <div class="card">
+      <h3>Plugin Tick Times</h3>
+      <div id="pluginTable"><em style="color:var(--dim)">Select a server</em></div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Configuration</h3>
+  <div id="configForm">Loading...</div>
+</div>
+
+<script>
+const BASE = location.pathname.replace(/\/+$/,'').replace(/\/[^/]*$/,'');
+const API = BASE.replace('/modules/','/api/modules/');
+let token = localStorage.getItem('ip_token');
+let selectedServer = null;
+
+async function api(path) {
+  const r = await fetch(API + '/' + path, {headers:{'Authorization':'Bearer '+token}});
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch(API + '/' + path, {method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return r.json();
+}
+
+async function refresh() {
+  try {
+    const st = await api('status');
+    document.getElementById('srvCount').textContent = st.server_count || 0;
+    const tpsEl = document.getElementById('avgTps');
+    tpsEl.textContent = st.avg_tps || '-';
+    tpsEl.className = 'stat ' + (st.avg_tps >= 18 ? 'green' : st.avg_tps >= 15 ? 'amber' : 'red');
+    document.getElementById('totalPlayers').textContent = st.total_players || 0;
+    document.getElementById('lagSpikes').textContent = st.total_lag_spikes || 0;
+    document.getElementById('lagSpikes').className = 'stat ' + (st.total_lag_spikes > 0 ? 'amber' : 'green');
+
+    const srvs = await api('servers');
+    const list = document.getElementById('serverList');
+    if (srvs.servers && srvs.servers.length) {
+      list.innerHTML = srvs.servers.map(s => {
+        const sel = selectedServer === s.name ? 'selected' : '';
+        const tpsCls = s.tps >= 18 ? 'green' : s.tps >= 15 ? 'amber' : 'red';
+        const memPct = s.memory_max_mb > 0 ? Math.round(s.memory_used_mb/s.memory_max_mb*100) : 0;
+        return `<div class="card server-card ${sel}" style="margin-bottom:8px;padding:12px" onclick="selectServer('${s.name}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${s.name}</strong>
+            <span class="tag ${tpsCls === 'green' ? 'tag-ok' : tpsCls === 'amber' ? 'tag-warn' : 'tag-crit'}">${s.tps} TPS</span>
+          </div>
+          <div style="font-size:12px;color:var(--dim);margin-top:4px">
+            Players: ${s.players} · Mem: ${memPct}% · CPU: ${s.cpu_percent}%
+          </div>
+        </div>`;
+      }).join('');
+      if (!selectedServer && srvs.servers.length) selectServer(srvs.servers[0].name);
+    } else {
+      list.innerHTML = '<em style="color:var(--dim)">No backend servers connected</em>';
+    }
+
+    // Lag spikes
+    const spikes = await api('lag-spikes');
+    const sl = document.getElementById('spikeList');
+    if (spikes.recent && spikes.recent.length) {
+      sl.innerHTML = '<table><tr><th>Time</th><th>Server</th><th>Chunk</th><th>Cost</th><th>Players</th></tr>' +
+        spikes.recent.slice(-10).reverse().map(s => `<tr>
+          <td>${new Date(s.timestamp).toLocaleTimeString()}</td>
+          <td>${s.server}</td>
+          <td>[${s.x}, ${s.z}] ${s.world}</td>
+          <td class="spike">${s.tick_ms.toFixed(1)}ms</td>
+          <td>${(s.players_nearby||[]).join(', ')||'-'}</td>
+        </tr>`).join('') + '</table>';
+    }
+
+    if (selectedServer) refreshDetail();
+  } catch(e) { console.error('Refresh error:', e); }
+}
+
+async function selectServer(name) {
+  selectedServer = name;
+  document.querySelectorAll('.server-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.server-card').forEach(c => {
+    if (c.textContent.includes(name)) c.classList.add('selected');
+  });
+  refreshDetail();
+}
+
+async function refreshDetail() {
+  if (!selectedServer) return;
+  document.getElementById('detailName').textContent = selectedServer;
+  try {
+    const d = await api('server/' + selectedServer);
+
+    // TPS chart
+    if (d.tps_history && d.tps_history.length) {
+      const canvas = document.getElementById('tpsChart');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.parentElement.clientWidth - 32;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr; canvas.height = 100 * dpr;
+      canvas.style.width = w+'px'; canvas.style.height = '100px';
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, 100);
+      const vals = d.tps_history.map(p => p[1]);
+      ctx.beginPath();
+      vals.forEach((v, i) => {
+        const x = (i/(vals.length-1||1))*w;
+        const y = 90 - (v/20)*80;
+        i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      });
+      ctx.strokeStyle = vals[vals.length-1] >= 18 ? '#22c55e' : vals[vals.length-1] >= 15 ? '#f59e0b' : '#f43f5e';
+      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.lineTo(w, 90); ctx.lineTo(0, 90); ctx.closePath();
+      ctx.fillStyle = 'rgba(34,211,167,.06)'; ctx.fill();
+      ctx.fillStyle = '#8b8ea8'; ctx.font = '10px Inter,sans-serif';
+      ctx.fillText('TPS: ' + vals[vals.length-1], 4, 12);
+    }
+
+    // Stats
+    const memPct = d.memory_max_mb > 0 ? Math.round(d.memory_used_mb/d.memory_max_mb*100) : 0;
+    document.getElementById('detailStats').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px">
+        <div>TPS: <strong>${d.tps}</strong></div>
+        <div>CPU: <strong>${d.cpu_percent}%</strong></div>
+        <div>Mem: <strong>${memPct}%</strong> (${d.memory_used_mb}/${d.memory_max_mb}MB)</div>
+        <div>Players: <strong>${d.players}</strong></div>
+      </div>`;
+
+    // Chunks
+    const ct = document.getElementById('chunkTable');
+    if (d.top_chunks && d.top_chunks.length) {
+      ct.innerHTML = '<table><tr><th>World</th><th>Chunk</th><th>Tick Cost</th><th>Entities</th><th>Players</th></tr>' +
+        d.top_chunks.map(c => `<tr>
+          <td>${c.world}</td><td>[${c.x}, ${c.z}]</td>
+          <td class="${c.is_spike?'spike':''}">${c.tick_ms}ms</td>
+          <td>${c.entity_count} (${c.tile_entity_count} tile)</td>
+          <td>${(c.players_nearby||[]).join(', ')||'-'}</td>
+        </tr>`).join('') + '</table>';
+    } else { ct.innerHTML = '<em style="color:var(--dim)">No profiling data yet</em>'; }
+
+    // Plugins
+    const pt = document.getElementById('pluginTable');
+    if (d.plugins && d.plugins.length) {
+      pt.innerHTML = '<table><tr><th>Plugin</th><th>Tick Time</th><th>Events</th></tr>' +
+        d.plugins.map(p => `<tr>
+          <td>${p.name}</td><td>${p.tick_ms}ms</td><td>${p.event_count}</td>
+        </tr>`).join('') + '</table>';
+    } else { pt.innerHTML = '<em style="color:var(--dim)">No profiling data yet</em>'; }
+  } catch(e) { console.error('Detail error:', e); }
+}
+
+async function loadConfig() {
+  try {
+    const c = await api('config');
+    document.getElementById('configForm').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+        <div class="field"><label>TPS Warn Threshold</label><input type="number" id="cfgTpsWarn" value="${c.tps_warn_threshold}" step="0.5"></div>
+        <div class="field"><label>TPS Critical Threshold</label><input type="number" id="cfgTpsCrit" value="${c.tps_critical_threshold}" step="0.5"></div>
+        <div class="field"><label>Memory Warn %</label><input type="number" id="cfgMemWarn" value="${c.memory_warn_percent}"></div>
+        <div class="field"><label>Lag Spike Threshold (ms)</label><input type="number" id="cfgLagMs" value="${c.lag_spike_threshold_ms}"></div>
+        <div class="field"><label>Top Chunks to Track</label><input type="number" id="cfgTopChunks" value="${c.top_chunks_to_track}"></div>
+        <div class="field"><label>Profiling Interval (sec)</label><input type="number" id="cfgInterval" value="${c.profiling_interval_sec}"></div>
+      </div>
+      <button class="btn" onclick="saveConfig()" style="margin-top:8px">Save Configuration</button>
+      <span id="cfgMsg" style="margin-left:12px;font-size:12px"></span>`;
+  } catch {}
+}
+
+async function saveConfig() {
+  const body = {
+    tps_warn_threshold: parseFloat(document.getElementById('cfgTpsWarn').value),
+    tps_critical_threshold: parseFloat(document.getElementById('cfgTpsCrit').value),
+    memory_warn_percent: parseInt(document.getElementById('cfgMemWarn').value),
+    lag_spike_threshold_ms: parseInt(document.getElementById('cfgLagMs').value),
+    top_chunks_to_track: parseInt(document.getElementById('cfgTopChunks').value),
+    profiling_interval_sec: parseInt(document.getElementById('cfgInterval').value)
+  };
+  const r = await apiPost('config', body);
+  document.getElementById('cfgMsg').textContent = r.success ? 'Saved!' : 'Error';
+  document.getElementById('cfgMsg').style.color = r.success ? 'var(--green)' : 'var(--red)';
+}
+
+// Theme sync from parent
+window.addEventListener('message', e => {
+  if (e.data?.type === 'ip-theme-change') {
+    if (e.data.theme === 'default') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', e.data.theme);
+  }
+});
+
+refresh(); loadConfig();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>
+
