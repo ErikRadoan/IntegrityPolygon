@@ -8,6 +8,7 @@ import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
+import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -23,6 +24,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.slf4j.Logger;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -289,45 +291,122 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
         }
         @Subscribe
         public void onPostLogin(PostLoginEvent event) {
+            if (!pendingVerification.contains(event.getPlayer().getUniqueId().toString())) {
+                return;
+            }
+
+            // Keep /2fa available as fallback if Paper dialog flow fails.
+            event.getPlayer().sendMessage(Component.text("2FA verification required.").color(NamedTextColor.GOLD));
+            event.getPlayer().sendMessage(Component.text("Use /2fa <code> if the dialog does not open automatically.").color(NamedTextColor.YELLOW));
+        }
+
+        @Subscribe
+        public void onServerPreConnect(ServerPreConnectEvent event) {
             Player player = event.getPlayer();
             String uuid = player.getUniqueId().toString();
+            // Only send the visual prompt if they're still pending 2FA authentication
             if (pendingVerification.contains(uuid)) {
-                player.sendMessage(Component.text("").color(NamedTextColor.GOLD));
-                player.sendMessage(Component.text("[IntegrityPolygon] New IP detected. 2FA required.").color(NamedTextColor.GOLD));
-                player.sendMessage(Component.text("Use /2fa <code> to verify.").color(NamedTextColor.YELLOW));
-                player.sendMessage(Component.text("You will be kicked in 60 seconds if not verified.").color(NamedTextColor.RED));
-
-                // Auto-kick after 60s if not verified
-                context.getTaskScheduler().schedule(() -> {
-                    if (pendingVerification.contains(uuid)) {
-                        Optional<Player> p = proxyServer.getPlayer(event.getPlayer().getUniqueId());
-                        p.ifPresent(pl -> {
-                            pl.disconnect(Component.text("2FA verification timed out.").color(NamedTextColor.RED));
-                            log("WARN", "2FA", "Kicked " + pl.getUsername() + " — 2FA verification timed out");
-                        });
-                        pendingVerification.remove(uuid);
+                if (extenderService != null) {
+                    String extenderId = resolveExtenderForTarget(event);
+                    if (extenderId != null) {
+                        JsonObject payload = new JsonObject();
+                        payload.addProperty("action", "show_2fa_prompt");
+                        payload.addProperty("player", player.getUsername());
+                        payload.addProperty("uuid", uuid);
+                        payload.addProperty("timeout", 60);
+                        extenderService.sendMessage("account-protection", extenderId, "command", payload);
+                    } else {
+                        // Do not allow bypassing pending 2FA when no mapped extender is available.
+                        event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                        player.sendMessage(Component.text("2FA requires an extender on the target server.").color(NamedTextColor.RED));
+                        player.sendMessage(Component.text("Contact an administrator or use /2fa after extender mapping is fixed.").color(NamedTextColor.YELLOW));
+                        log("WARN", "2FA", "Denied pre-connect for " + player.getUsername() + " due to missing mapped extender");
                     }
-                }, 60, TimeUnit.SECONDS);
+                }
             }
         }
 
         @Subscribe
         public void onServerPostConnect(ServerPostConnectEvent event) {
-            Player player = event.getPlayer();
-            String uuid = player.getUniqueId().toString();
-            // Only send the visual prompt if they're still pending 2FA authentication
-            if (pendingVerification.contains(uuid)) {
-                // Now they are routed to a backend server, we can send the dialog packet
-                if (extenderService != null) {
-                    extenderService.sendCommand("account-protection", uuid, Map.of(
-                            "action", "show_2fa_prompt",
-                            "player", player.getUsername(),
-                            "uuid", uuid,
-                            "timeout", 60
-                    ));
-                }
+            // Retry prompt dispatch after connect in case a pre-connect race dropped the command.
+            String uuid = event.getPlayer().getUniqueId().toString();
+            if (!pendingVerification.contains(uuid) || extenderService == null) {
+                return;
+            }
+            var current = event.getPlayer().getCurrentServer().orElse(null);
+            if (current == null) {
+                return;
+            }
+            String extenderId = resolveExtenderForTarget(current.getServer());
+            if (extenderId == null) {
+                return;
+            }
+            JsonObject payload = new JsonObject();
+            payload.addProperty("action", "show_2fa_prompt");
+            payload.addProperty("player", event.getPlayer().getUsername());
+            payload.addProperty("uuid", uuid);
+            payload.addProperty("timeout", 60);
+            extenderService.sendMessage("account-protection", extenderId, "command", payload);
+        }
+    }
+
+    private String resolveExtenderForTarget(ServerPreConnectEvent event) {
+        if (extenderService == null || event.getResult() == null) {
+            return null;
+        }
+
+        var targetServer = event.getResult().getServer().orElse(null);
+        if (targetServer == null) {
+            return null;
+        }
+
+        return resolveExtenderForTarget(targetServer);
+    }
+
+    private String resolveExtenderForTarget(com.velocitypowered.api.proxy.server.RegisteredServer targetServer) {
+        if (extenderService == null || targetServer == null) {
+            return null;
+        }
+
+        String host = targetServer.getServerInfo().getAddress().getHostString();
+        int port = targetServer.getServerInfo().getAddress().getPort();
+        Set<String> targetHostVariants = buildHostVariants(host);
+
+        for (Map.Entry<String, Map<String, Object>> entry : extenderService.getServerStates().entrySet()) {
+            Map<String, Object> state = entry.getValue();
+            String stateIp = String.valueOf(state.getOrDefault("server_ip", "")).trim();
+            int statePort = state.get("server_port") instanceof Number n ? n.intValue() : 0;
+            if (port != statePort) {
+                continue;
+            }
+            Set<String> stateVariants = buildHostVariants(stateIp);
+            boolean hostMatch = !Collections.disjoint(targetHostVariants, stateVariants);
+            if (hostMatch) {
+                return entry.getKey();
             }
         }
+
+        if (extenderService.getServerStates().size() == 1) {
+            return extenderService.getServerStates().keySet().iterator().next();
+        }
+        return null;
+    }
+
+    private Set<String> buildHostVariants(String host) {
+        Set<String> variants = new HashSet<>();
+        if (host == null || host.isBlank()) {
+            return variants;
+        }
+        String trimmed = host.trim().toLowerCase(Locale.ROOT);
+        variants.add(trimmed);
+        try {
+            InetAddress addr = InetAddress.getByName(trimmed);
+            variants.add(addr.getHostAddress().toLowerCase(Locale.ROOT));
+            variants.add(addr.getHostName().toLowerCase(Locale.ROOT));
+            variants.add(addr.getCanonicalHostName().toLowerCase(Locale.ROOT));
+        } catch (Exception ignored) {
+        }
+        return variants;
     }
     // ================================================================
     //  /2fa COMMAND

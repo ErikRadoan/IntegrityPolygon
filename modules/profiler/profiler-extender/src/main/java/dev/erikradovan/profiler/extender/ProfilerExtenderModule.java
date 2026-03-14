@@ -45,6 +45,7 @@ public class ProfilerExtenderModule implements ExtenderModule {
     private static final int HOTSPOT_TOP_CLASSES_PER_PLUGIN = 25;
     private static final int HOTSPOT_TOP_METHODS_PER_CLASS = 20;
     private static final int SNAPSHOT_MAX_ROWS = 60;
+    private static final int SNAPSHOT_MAX_ROWS_PER_PLUGIN = 12;
 
     private ExtenderModuleContext context;
     private Logger logger;
@@ -593,8 +594,8 @@ public class ProfilerExtenderModule implements ExtenderModule {
     }
 
     private JsonArray buildSnapshotTopMethods(Map<String, Long> methodWindow, long totalSamples) {
-        // Build a flat list of all methods with plugin attribution
-        List<MethodSnapshot> allMethods = new ArrayList<>();
+        // Build per-plugin buckets so filtering out infrastructure still keeps useful rows.
+        Map<String, List<MethodSnapshot>> byPlugin = new LinkedHashMap<>();
 
         for (Map.Entry<String, Long> entry : methodWindow.entrySet()) {
             String fullMethod = entry.getKey();
@@ -604,18 +605,45 @@ public class ProfilerExtenderModule implements ExtenderModule {
             }
 
             String pluginName = methodOwnerCache.getOrDefault(fullMethod, guessPluginForMethod(fullMethod));
-            allMethods.add(new MethodSnapshot(
+            MethodSnapshot snap = new MethodSnapshot(
                     fullMethod,
                     pluginName,
                     extractClassName(fullMethod),
                     extractMethodName(fullMethod),
                     samples,
                     isInfrastructureOwner(pluginName)
-            ));
+            );
+            byPlugin.computeIfAbsent(pluginName, ignored -> new ArrayList<>()).add(snap);
         }
 
-        // Sort globally: non-infrastructure methods first, then by sample count descending
-        allMethods.sort((a, b) -> {
+        List<Map.Entry<String, List<MethodSnapshot>>> orderedPlugins = new ArrayList<>(byPlugin.entrySet());
+        orderedPlugins.sort((a, b) -> {
+            long aTotal = a.getValue().stream().mapToLong(MethodSnapshot::samples).sum();
+            long bTotal = b.getValue().stream().mapToLong(MethodSnapshot::samples).sum();
+            boolean aInfra = isInfrastructureOwner(a.getKey());
+            boolean bInfra = isInfrastructureOwner(b.getKey());
+            if (aInfra != bInfra) {
+                return aInfra ? 1 : -1;
+            }
+            return Long.compare(bTotal, aTotal);
+        });
+
+        List<MethodSnapshot> selected = new ArrayList<>();
+        for (Map.Entry<String, List<MethodSnapshot>> pluginEntry : orderedPlugins) {
+            List<MethodSnapshot> pluginMethods = pluginEntry.getValue();
+            pluginMethods.sort((a, b) -> Long.compare(b.samples(), a.samples()));
+            int cap = isInfrastructureOwner(pluginEntry.getKey())
+                    ? Math.max(2, SNAPSHOT_MAX_ROWS_PER_PLUGIN / 3)
+                    : SNAPSHOT_MAX_ROWS_PER_PLUGIN;
+            for (int i = 0; i < pluginMethods.size() && i < cap; i++) {
+                selected.add(pluginMethods.get(i));
+            }
+            if (selected.size() >= SNAPSHOT_MAX_ROWS) {
+                break;
+            }
+        }
+
+        selected.sort((a, b) -> {
             if (a.infrastructure() != b.infrastructure()) {
                 return a.infrastructure() ? 1 : -1;
             }
@@ -623,9 +651,9 @@ public class ProfilerExtenderModule implements ExtenderModule {
         });
 
         JsonArray topMethods = new JsonArray();
-        int limit = Math.min(SNAPSHOT_MAX_ROWS, allMethods.size());
+        int limit = Math.min(SNAPSHOT_MAX_ROWS, selected.size());
         for (int i = 0; i < limit; i++) {
-            MethodSnapshot m = allMethods.get(i);
+            MethodSnapshot m = selected.get(i);
             JsonObject method = new JsonObject();
             method.addProperty("method", m.fullMethod());
             method.addProperty("plugin", m.plugin());
