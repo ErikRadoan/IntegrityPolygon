@@ -1,0 +1,640 @@
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>´╗┐@echo off 
+'´╗┐@echo' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>setlocal enabledelayedexpansion 
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>set "JAVA_HOME=C:\Program Files\Java\jdk-25.0.2" 
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>set "MVN=C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.1\plugins\maven\lib\maven3\bin\mvn.cmd" 
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>echo [*] Building main plugin... 
+[*] Building main plugin...
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender>cd /d "C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon" 
+
+C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon>call "C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.1\plugins\maven\lib\maven3\bin\mvn.cmd" clean package install -DskipTests 
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/C:/Program%20Files/JetBrains/IntelliJ%20IDEA%202025.3.1/plugins/maven/lib/maven3/lib/guice-5.1.0-classes.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< dev.erikradovan:integritypolygon >------------------
+[INFO] Building IntegrityPolygon 2.0.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ integritypolygon ---
+[INFO] Deleting C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ integritypolygon ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ integritypolygon ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 48 source files with javac [debug release 21] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ integritypolygon ---
+[INFO] skip non existing resourceDirectory C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ integritypolygon ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ integritypolygon ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ integritypolygon ---
+[INFO] Building jar: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] 
+[INFO] --- shade:3.6.0:shade (default) @ integritypolygon ---
+[INFO] Including io.javalin:javalin:jar:5.6.5 in the shaded jar.
+[INFO] Including org.jetbrains:annotations:jar:24.0.1 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api:jar:5.0.2 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-http:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-util:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-io:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-webapp:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-security:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-xml:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-api:jar:11.0.17 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.8.21 in the shaded jar.
+[INFO] Including com.auth0:java-jwt:jar:4.4.0 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-databind:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-annotations:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-core:jar:2.14.2 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_common:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel_agent:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_common:jar:0.16.0 in the shaded jar.
+[INFO] No artifact matching filter jakarta.servlet:*
+[INFO] Minimizing jar dev.erikradovan:integritypolygon:jar:2.0.0-SNAPSHOT
+[WARNING] Removing module-info from integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] Dependency-reduced POM written at: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\dependency-reduced-pom.xml
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE
+[WARNING] jetty-webapp-11.0.17.jar, websocket-jetty-server-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/org.eclipse.jetty.webapp.Configuration
+[WARNING] annotations-24.0.1.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar define 1 overlapping classes: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE.txt
+[WARNING] jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/LICENSE
+[WARNING] annotations-24.0.1.jar, integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-jakarta-servlet-api-5.0.2.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-common-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar, simpleclient-0.16.0.jar, simpleclient_common-0.16.0.jar, simpleclient_tracer_common-0.16.0.jar, simpleclient_tracer_otel-0.16.0.jar, simpleclient_tracer_otel_agent-0.16.0.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Minimized 4682 -> 4535 (96%)
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar with C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT-shaded.jar
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ integritypolygon ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ integritypolygon ---
+[INFO] Nothing to compile - all classes are up to date.
+[WARNING] Overwriting artifact's file from C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar to C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ integritypolygon ---
+[INFO] skip non existing resourceDirectory C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ integritypolygon ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ integritypolygon ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ integritypolygon ---
+[INFO] 
+[INFO] --- shade:3.6.0:shade (default) @ integritypolygon ---
+[INFO] Including io.javalin:javalin:jar:5.6.5 in the shaded jar.
+[INFO] Including org.jetbrains:annotations:jar:24.0.1 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api:jar:5.0.2 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-http:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-util:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-io:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-webapp:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-security:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-xml:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-api:jar:11.0.17 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.8.21 in the shaded jar.
+[INFO] Including com.auth0:java-jwt:jar:4.4.0 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-databind:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-annotations:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-core:jar:2.14.2 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_common:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel_agent:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_common:jar:0.16.0 in the shaded jar.
+[INFO] No artifact matching filter jakarta.servlet:*
+[INFO] Minimizing jar dev.erikradovan:integritypolygon:jar:2.0.0-SNAPSHOT
+[WARNING] Removing module-info from integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] Dependency-reduced POM written at: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\dependency-reduced-pom.xml
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-core-common-11.0.17.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-common/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-common/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.websocket.core.Extension
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-xml-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-xml/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-xml/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-jetty-common-11.0.17.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-common/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-common/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.websocket.api.ExtensionConfig$Parser
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, simpleclient_tracer_otel-0.16.0.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_otel/pom.properties
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_otel/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-jetty-api-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-api/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-api/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-webapp-11.0.17.jar, websocket-jetty-server-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/org.eclipse.jetty.webapp.Configuration
+[WARNING] annotations-24.0.1.jar, integritypolygon-2.0.0-SNAPSHOT.jar define 3 overlapping classes: 
+[WARNING]   - org.jetbrains.annotations.NonNls
+[WARNING]   - org.jetbrains.annotations.NotNull
+[WARNING]   - org.jetbrains.annotations.Nullable
+[WARNING] annotations-24.0.1.jar, integritypolygon-2.0.0-SNAPSHOT.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar define 1 overlapping classes: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-util-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-util/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-util/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, simpleclient_tracer_common-0.16.0.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_common/pom.properties
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_common/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar define 74 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-annotations/pom.properties
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-annotations/pom.xml
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotation
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotationValue
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotationsInside
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonInject
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonInject$Value
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAlias
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAnyGetter
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAnySetter
+[WARNING]   - 64 more...
+[WARNING] annotations-24.0.1.jar, integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-jakarta-servlet-api-5.0.2.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-common-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar, simpleclient-0.16.0.jar, simpleclient_common-0.16.0.jar, simpleclient_tracer_common-0.16.0.jar, simpleclient_tracer_otel-0.16.0.jar, simpleclient_tracer_otel_agent-0.16.0.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jackson-databind-2.14.2.jar define 727 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-databind/pom.properties
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-databind/pom.xml
+[WARNING]   - META-INF/services/com.fasterxml.jackson.core.ObjectCodec
+[WARNING]   - com.fasterxml.jackson.databind.AbstractTypeResolver
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$ReferenceProperty
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$ReferenceProperty$Type
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$XmlExtensions
+[WARNING]   - com.fasterxml.jackson.databind.BeanDescription
+[WARNING]   - com.fasterxml.jackson.databind.BeanProperty
+[WARNING]   - 717 more...
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-jetty-server-11.0.17.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-server/pom.xml
+[WARNING]   - META-INF/services/jakarta.servlet.ServletContainerInitializer
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jackson-core-2.14.2.jar define 153 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.properties
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.xml
+[WARNING]   - META-INF/services/com.fasterxml.jackson.core.JsonFactory
+[WARNING]   - com.fasterxml.jackson.core.Base64Variant
+[WARNING]   - com.fasterxml.jackson.core.Base64Variant$PaddingReadBehaviour
+[WARNING]   - com.fasterxml.jackson.core.Base64Variants
+[WARNING]   - com.fasterxml.jackson.core.FormatFeature
+[WARNING]   - com.fasterxml.jackson.core.FormatSchema
+[WARNING]   - com.fasterxml.jackson.core.JacksonException
+[WARNING]   - com.fasterxml.jackson.core.JsonEncoding
+[WARNING]   - 143 more...
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, javalin-5.6.5.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/javalin.kotlin_module
+[WARNING]   - META-INF/maven/io.javalin/javalin/pom.properties
+[WARNING]   - META-INF/maven/io.javalin/javalin/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, kotlin-stdlib-common-1.8.21.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/kotlin-stdlib-common.kotlin_module
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-webapp-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-webapp/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-webapp/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-http-11.0.17.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-http/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-http/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-servlet-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-servlet/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-servlet/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, simpleclient_common-0.16.0.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_common/pom.properties
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_common/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-security-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-security/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-security/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, kotlin-stdlib-1.8.21.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/kotlin-stdlib-jdk7.kotlin_module
+[WARNING]   - META-INF/kotlin-stdlib-jdk8.kotlin_module
+[WARNING]   - META-INF/kotlin-stdlib.kotlin_module
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, simpleclient_tracer_otel_agent-0.16.0.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_otel_agent/pom.properties
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient_tracer_otel_agent/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-server-11.0.17.jar define 3 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-server/pom.xml
+[WARNING]   - jetty-dir.css
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-io-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-io/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-io/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-core-server-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-server/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE.txt
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/LICENSE
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, simpleclient-0.16.0.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient/pom.properties
+[WARNING]   - META-INF/maven/io.prometheus/simpleclient/pom.xml
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, jetty-jakarta-servlet-api-5.0.2.jar define 204 overlapping classes and resources: 
+[WARNING]   - META-INF/LICENSE.md
+[WARNING]   - META-INF/NOTICE.md
+[WARNING]   - jakarta.servlet.AsyncContext
+[WARNING]   - jakarta.servlet.AsyncEvent
+[WARNING]   - jakarta.servlet.AsyncListener
+[WARNING]   - jakarta.servlet.DispatcherType
+[WARNING]   - jakarta.servlet.Filter
+[WARNING]   - jakarta.servlet.FilterChain
+[WARNING]   - jakarta.servlet.FilterConfig
+[WARNING]   - jakarta.servlet.FilterRegistration
+[WARNING]   - 194 more...
+[WARNING] integritypolygon-2.0.0-SNAPSHOT.jar, websocket-servlet-11.0.17.jar define 2 overlapping resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-servlet/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-servlet/pom.xml
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Minimized 9059 -> 8807 (97%)
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar with C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT-shaded.jar
+[INFO] 
+[INFO] --- install:3.1.2:install (default-install) @ integritypolygon ---
+[INFO] Installing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\dependency-reduced-pom.xml to C:\Users\erikr\.m2\repository\dev\erikradovan\integritypolygon\2.0.0-SNAPSHOT\integritypolygon-2.0.0-SNAPSHOT.pom
+[INFO] Installing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar to C:\Users\erikr\.m2\repository\dev\erikradovan\integritypolygon\2.0.0-SNAPSHOT\integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.678 s
+[INFO] Finished at: 2026-03-14T11:49:04+01:00
+[INFO] ------------------------------------------------------------------------
+[*] Building extender...
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/C:/Program%20Files/JetBrains/IntelliJ%20IDEA%202025.3.1/plugins/maven/lib/maven3/lib/guice-5.1.0-classes.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< dev.erikradovan:integritypolygon-extender >--------------
+[INFO] Building IntegrityPolygon Extender 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ integritypolygon-extender ---
+[INFO] Deleting C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ integritypolygon-extender ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ integritypolygon-extender ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 4 source files with javac [debug release 21] to target\classes
+[INFO] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\extender\src\main\java\dev\erikradovan\extender\ExtenderPlugin.java uses or overrides a deprecated API.
+[INFO] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java: Recompile with -Xlint:deprecation for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[68,45] cannot find symbol
+  symbol:   class Set
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[78,19] cannot find symbol
+  symbol:   class Set
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[78,23] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[81,19] cannot find symbol
+  symbol:   class Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[81,23] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,19] cannot find symbol
+  symbol:   class Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,23] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,53] package io.papermc.paper.network does not exist
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[83,19] cannot find symbol
+  symbol:   class Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[83,23] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[389,19] cannot find symbol
+  symbol:   class Set
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[458,97] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[489,13] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[668,64] cannot find symbol
+  symbol:   class AsyncPlayerConnectionConfigureEvent
+  location: package io.papermc.paper.event.player
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[694,64] cannot find symbol
+  symbol:   class PlayerConnectionCloseEvent
+  location: package io.papermc.paper.event.player
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[700,42] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[727,49] cannot find symbol
+  symbol:   class Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[187,21] cannot find symbol
+  symbol:   variable UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[338,9] cannot find symbol
+  symbol:   class Set
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[408,27] cannot find symbol
+  symbol:   variable UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[410,42] cannot find symbol
+  symbol:   variable UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[424,35] cannot find symbol
+  symbol:   variable List
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[425,37] cannot find symbol
+  symbol:   variable List
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[431,33] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[441,33] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[462,35] cannot find symbol
+  symbol:   variable List
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[463,37] cannot find symbol
+  symbol:   variable List
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[493,17] package Map does not exist
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[493,24] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[512,17] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[512,29] cannot find symbol
+  symbol:   variable UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[571,17] cannot find symbol
+  symbol:   class List
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[571,47] cannot find symbol
+  symbol:   class ArrayList
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[618,41] cannot find symbol
+  symbol:   variable Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[621,23] cannot find symbol
+  symbol:   variable Objects
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[626,42] cannot find symbol
+  symbol:   variable Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[629,23] cannot find symbol
+  symbol:   variable Objects
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[636,41] cannot find symbol
+  symbol:   variable Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[658,41] cannot find symbol
+  symbol:   variable Map
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[669,9] cannot find symbol
+  symbol:   class UUID
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[685,25] cannot find symbol
+  symbol:   method closeDialog()
+  location: variable audience of type net.kyori.adventure.audience.Audience
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[728,9] cannot find symbol
+  symbol:   class Set
+  location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[732,17] package Map does not exist
+[INFO] 43 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.230 s
+[INFO] Finished at: 2026-03-14T11:49:08+01:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project integritypolygon-extender: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[68,45] cannot find symbol
+[ERROR]   symbol:   class Set
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[78,19] cannot find symbol
+[ERROR]   symbol:   class Set
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[78,23] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[81,19] cannot find symbol
+[ERROR]   symbol:   class Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[81,23] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,19] cannot find symbol
+[ERROR]   symbol:   class Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,23] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[82,53] package io.papermc.paper.network does not exist
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[83,19] cannot find symbol
+[ERROR]   symbol:   class Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[83,23] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[389,19] cannot find symbol
+[ERROR]   symbol:   class Set
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[458,97] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[489,13] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[668,64] cannot find symbol
+[ERROR]   symbol:   class AsyncPlayerConnectionConfigureEvent
+[ERROR]   location: package io.papermc.paper.event.player
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[694,64] cannot find symbol
+[ERROR]   symbol:   class PlayerConnectionCloseEvent
+[ERROR]   location: package io.papermc.paper.event.player
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[700,42] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[727,49] cannot find symbol
+[ERROR]   symbol:   class Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[187,21] cannot find symbol
+[ERROR]   symbol:   variable UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[338,9] cannot find symbol
+[ERROR]   symbol:   class Set
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[408,27] cannot find symbol
+[ERROR]   symbol:   variable UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[410,42] cannot find symbol
+[ERROR]   symbol:   variable UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[424,35] cannot find symbol
+[ERROR]   symbol:   variable List
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[425,37] cannot find symbol
+[ERROR]   symbol:   variable List
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[431,33] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[441,33] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[462,35] cannot find symbol
+[ERROR]   symbol:   variable List
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[463,37] cannot find symbol
+[ERROR]   symbol:   variable List
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[493,17] package Map does not exist
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[493,24] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[512,17] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[512,29] cannot find symbol
+[ERROR]   symbol:   variable UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[571,17] cannot find symbol
+[ERROR]   symbol:   class List
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[571,47] cannot find symbol
+[ERROR]   symbol:   class ArrayList
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[618,41] cannot find symbol
+[ERROR]   symbol:   variable Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[621,23] cannot find symbol
+[ERROR]   symbol:   variable Objects
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[626,42] cannot find symbol
+[ERROR]   symbol:   variable Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[629,23] cannot find symbol
+[ERROR]   symbol:   variable Objects
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[636,41] cannot find symbol
+[ERROR]   symbol:   variable Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[658,41] cannot find symbol
+[ERROR]   symbol:   variable Map
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[669,9] cannot find symbol
+[ERROR]   symbol:   class UUID
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[685,25] cannot find symbol
+[ERROR]   symbol:   method closeDialog()
+[ERROR]   location: variable audience of type net.kyori.adventure.audience.Audience
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[728,9] cannot find symbol
+[ERROR]   symbol:   class Set
+[ERROR]   location: class dev.erikradovan.extender.ExtenderPlugin
+[ERROR] /C:/Users/erikr/Projects/IdeaProjects/IntegrityPolygon/extender/src/main/java/dev/erikradovan/extender/ExtenderPlugin.java:[732,17] package Map does not exist
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[-] Build failed with error code 1

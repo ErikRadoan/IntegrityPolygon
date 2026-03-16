@@ -1,0 +1,10 @@
+{
+  "id": "geo-filtering",
+  "name": "Geo-Filtering",
+  "version": "1.0.0",
+  "description": "Country-based access control using geojs.io IP geolocation. Supports blacklist and whitelist modes to restrict connections by country.",
+  "author": "ErikRadovan",
+  "main": "dev.erikradovan.geofiltering.GeoFilteringModule",
+  "dashboard": "web/"
+}
+

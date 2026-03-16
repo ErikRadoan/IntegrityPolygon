@@ -1,0 +1,208 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Anti-Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
+[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
+[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
+[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
+[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
+[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
+body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+.stat .v{font-size:18px;font-weight:700;margin-top:2px}
+.v.red{color:var(--red)}.v.green{color:var(--green)}.v.accent{color:var(--accent)}.v.amber{color:var(--amber)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+canvas{width:100%;height:80px}
+.bar{padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.bar.atk{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.bar.ok{background:rgba(34,197,94,.08);color:var(--green);border:1px solid rgba(34,197,94,.15)}
+.bar .dot{width:7px;height:7px;border-radius:50%;animation:p 1.5s infinite}
+.bar.atk .dot{background:var(--red)}.bar.ok .dot{background:var(--green)}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
+.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
+.sw input{display:none}
+.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
+.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
+.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
+.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.field input{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:8px}.row .field{flex:1}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
+.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:10px}
+.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
+.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
+.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
+.ip-list{max-height:140px;overflow-y:auto}
+.ip-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;font-family:monospace}
+.ip-row:last-child{border:none}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+</style></head><body>
+<div id="root">Loading...</div>
+<script>
+// ── Theme sync ──
+(function(){
+  const p=new URLSearchParams(location.search),t=p.get('theme');
+  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
+  window.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='ip-theme-change'){
+      const th=e.data.theme;
+      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme',th);
+    }
+  });
+})();
+const token=new URLSearchParams(location.search).get('token'),API=location.origin,root=document.getElementById('root');
+async function api(p,o={}){const h={'Content-Type':'application/json','Authorization':'Bearer '+token,...(o.headers||{})};const r=await fetch(API+'/api/modules/anti-bot/'+p,{...o,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
+let rateData=[], initialized=false;
+
+const TOGGLES=[
+['enable_rate_limit','Rate Limiting','Max connections per IP in time window'],
+['enable_cooldown','Connection Cooldown','Minimum delay between connections from same IP'],
+['enable_spam_detection','Spam Login Detection','Block rapid re-login attempts from same IP/username'],
+['enable_flood_detection','Flood Join Detection','Detect burst of unique IPs joining simultaneously'],
+['enable_name_filter','Bot Name Filter','Block usernames matching bot patterns + entropy check'],
+['enable_handshake_validation','Handshake Validation','Validate Minecraft protocol version on connect'],
+['enable_syn_flood_detection','SYN Flood Detection','Detect connections that never complete login'],
+['enable_dynamic_blocking','Dynamic Blocking','Escalating bans based on threat score accumulation'],
+['enable_lockdown','Lockdown Mode','Only allow known players during active attack'],
+];
+
+async function load(){
+  try{
+    const[s,r]=await Promise.all([api('status'),api('rates')]);
+    rateData=r.rates||[];
+    if(!initialized){
+      const[c,w]=await Promise.all([api('config'),api('whitelist')]);
+      renderFull(s,c,w.ips||[]);
+      initialized=true;
+    }else{
+      // Skip live update if user is editing a form field
+      if(!document.activeElement || !document.activeElement.closest('.card')) {
+        updateLive(s);
+      } else {
+        // Only update stats and chart, not config areas
+        updateStatsOnly(s);
+      }
+    }
+  }catch(e){
+    if(!initialized) root.innerHTML='<div style="color:var(--red)">Error: '+(e.error||e.message||'unknown')+'</div>';
+  }
+}
+
+function renderFull(s,c,wl){
+root.innerHTML=`
+<div id="statusBar"></div>
+<div id="statsGrid"><div class="grid">
+<div class="stat"><div class="l">Join Rate</div><div class="v accent" id="vRate">${s.current_rate}/s</div></div>
+<div class="stat"><div class="l">Blocked</div><div class="v red" id="vBlocked">${s.total_blocked}</div></div>
+<div class="stat"><div class="l">Allowed</div><div class="v green" id="vAllowed">${s.total_allowed}</div></div>
+<div class="stat"><div class="l">Known Players</div><div class="v" id="vKnown">${s.known_players}</div></div>
+<div class="stat"><div class="l">Attacks</div><div class="v" id="vAttacks">${s.total_attacks}</div></div>
+<div class="stat"><div class="l">Dynamic Bans</div><div class="v" id="vBans">${s.dynamic_bans}</div></div>
+<div class="stat"><div class="l">SYN Floods</div><div class="v" id="vSyn">${s.syn_floods}</div></div>
+<div class="stat"><div class="l">Pending</div><div class="v" id="vPending">${s.pending_handshakes}</div></div>
+</div></div>
+<div class="card"><h3>Join Rate (2 min)</h3><canvas id="chart" height="80"></canvas></div>
+<div id="atkBtn"></div>
+<div class="cols">
+<div>
+<div class="card"><h3>Detection Modules</h3>
+${TOGGLES.map(([k,n,h])=>`<div class="tog"><div><span>${n}</span><br><span style="font-size:10px;color:var(--muted)">${h}</span></div><label class="sw"><input type="checkbox" data-k="${k}" ${c[k]?'checked':''}><span class="tr"></span></label></div>`).join('')}
+</div>
+<div class="card"><h3>IP Whitelist</h3>
+<div class="row" style="margin-bottom:8px"><div class="field" style="margin:0"><input id="wlIp" placeholder="e.g. 192.168.1.1"></div><button class="btn" onclick="addWl()">Add</button></div>
+<div class="ip-list" id="wlList">${renderWl(wl)}</div>
+</div>
+</div>
+<div>
+<div class="card"><h3>Rate Limiting</h3>
+<div class="row"><div class="field"><label>Max Conn / IP</label><input id="cRate" type="number" value="${c.max_conn_per_ip}"></div><div class="field"><label>Window (sec)</label><input id="cWin" type="number" value="${c.conn_window_sec}"></div></div>
+<div class="row"><div class="field"><label>Cooldown (ms)</label><input id="cCool" type="number" value="${c.cooldown_ms}"></div><div class="field"><label>Flood Threshold (/s)</label><input id="cFlood" type="number" value="${c.global_join_threshold}"></div></div>
+<div class="field"><label>Attack Cooldown (sec)</label><input id="cAtkCool" type="number" value="${c.attack_cooldown_sec}"></div>
+</div>
+<div class="card"><h3>Bot Heuristics</h3>
+<div class="field"><label>Bot Name Regex</label><input id="cRegex" value="${esc(c.bot_name_regex)}"></div>
+<div class="field"><label>Name Entropy Threshold</label><input id="cEntropy" type="number" step="0.1" value="${c.name_entropy_threshold}"></div>
+</div>
+<div class="card"><h3>Dynamic Blocking</h3>
+<div class="row"><div class="field"><label>Threat Score Threshold</label><input id="cThreat" type="number" value="${c.threat_score_threshold}"></div><div class="field"><label>SYN Timeout (ms)</label><input id="cSyn" type="number" value="${c.syn_timeout_ms}"></div></div>
+<div class="row"><div class="field"><label>Base Ban (sec)</label><input id="cBanBase" type="number" value="${c.dynamic_block_base_sec}"></div><div class="field"><label>Max Ban (sec)</label><input id="cBanMax" type="number" value="${c.dynamic_block_max_sec}"></div></div>
+</div>
+<div class="card"><h3>Handshake Protocol</h3>
+<div class="row"><div class="field"><label>Min Protocol Version</label><input id="cProtoMin" type="number" value="${c.min_protocol_version||47}"></div><div class="field"><label>Max Protocol Version</label><input id="cProtoMax" type="number" value="${c.max_protocol_version||99999}"></div></div>
+<div style="font-size:10px;color:var(--muted);margin-top:2px">MC 1.8 = 47, MC 1.21.x = 770. Set max to 99999 for future-proof.</div>
+</div>
+<div class="card"><h3>Messages</h3>
+<div class="field"><label>Kick Message</label><input id="cKick" value="${esc(c.kick_message)}"></div>
+<div class="field"><label>Lockdown Message</label><input id="cLock" value="${esc(c.lockdown_message)}"></div>
+</div>
+<button class="btn p" onclick="saveConfig()">Save Configuration</button>
+<div id="saveMsg" class="msg"></div>
+</div>
+</div>`;
+document.querySelectorAll('.sw input').forEach(el=>el.onchange=()=>saveToggle(el.dataset.k,el.checked));
+updateLive(s);
+}
+
+function updateLive(s){
+  updateStatsOnly(s);
+  const ab=document.getElementById('atkBtn');
+  if(ab){
+    const shouldShow=s.under_attack;
+    const hasBtn=ab.querySelector('button');
+    if(shouldShow&&!hasBtn) ab.innerHTML='<div style="margin-bottom:10px"><button class="btn d" onclick="clearAtk()">End Attack &amp; Clear</button></div>';
+    else if(!shouldShow&&hasBtn) ab.innerHTML='';
+  }
+  drawChart();
+}
+
+function updateStatsOnly(s){
+  // Status bar — only rewrite if state changed
+  const sb=document.getElementById('statusBar');
+  if(sb){
+    const isAtk=s.under_attack;
+    const bar=sb.querySelector('.bar');
+    const curAtk=bar&&bar.classList.contains('atk');
+    if(!bar||isAtk!==curAtk){
+      sb.innerHTML=`<div class="${isAtk?'bar atk':'bar ok'}"><div class="dot"></div><span id="statusText"></span></div>`;
+    }
+    const txt=document.getElementById('statusText');
+    if(txt){
+      txt.textContent=isAtk?
+        'BOT ATTACK \u2014 '+s.current_rate+' joins/sec'+(s.attack_duration?' \u2014 '+s.attack_duration:'')+(s.lockdown_active?' \u2014 LOCKDOWN':'')
+        :'No active threats \u2014 monitoring '+s.tracked_ips+' IPs';
+    }
+  }
+  // Stats — granular textContent updates
+  const ids={vRate:s.current_rate+'/s',vBlocked:s.total_blocked,vAllowed:s.total_allowed,vKnown:s.known_players,vAttacks:s.total_attacks,vBans:s.dynamic_bans,vSyn:s.syn_floods,vPending:s.pending_handshakes};
+  for(const[id,val]of Object.entries(ids)){const el=document.getElementById(id);if(el)el.textContent=val;}
+  // Update color classes
+  const vA=document.getElementById('vAttacks');if(vA)vA.className=s.total_attacks>0?'v amber':'v';
+  const vB=document.getElementById('vBans');if(vB)vB.className=s.dynamic_bans>0?'v red':'v';
+  const vS=document.getElementById('vSyn');if(vS)vS.className=s.syn_floods>0?'v amber':'v';
+}
+
+function renderWl(wl){return wl.length?wl.map(ip=>`<div class="ip-row"><span>${esc(ip)}</span><button class="btn sm d" onclick="rmWl('${esc(ip)}')">Remove</button></div>`).join(''):'<div style="color:var(--muted);font-size:11px">No whitelisted IPs</div>'}
+
+function drawChart(){const cv=document.getElementById('chart');if(!cv||rateData.length<2)return;const c=cv.getContext('2d');const w=cv.parentElement.clientWidth-28,h=80;cv.width=w*2;cv.height=h*2;cv.style.width=w+'px';cv.style.height=h+'px';c.scale(2,2);c.clearRect(0,0,w,h);const mx=Math.max(...rateData,5),p=4,gw=w-p*2,gh=h-p*2;c.strokeStyle='rgba(255,255,255,.04)';c.lineWidth=1;for(let i=0;i<5;i++){const y=p+gh*(i/4);c.beginPath();c.moveTo(p,y);c.lineTo(p+gw,y);c.stroke()}c.beginPath();rateData.forEach((v,i)=>{const x=p+(i/(rateData.length-1))*gw,y=p+gh*(1-v/mx);i===0?c.moveTo(x,y):c.lineTo(x,y)});c.lineTo(p+gw,p+gh);c.lineTo(p,p+gh);c.closePath();const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(59,130,246,.25)');g.addColorStop(1,'rgba(59,130,246,.02)');c.fillStyle=g;c.fill();c.beginPath();rateData.forEach((v,i)=>{const x=p+(i/(rateData.length-1))*gw,y=p+gh*(1-v/mx);i===0?c.moveTo(x,y):c.lineTo(x,y)});c.strokeStyle='#3b82f6';c.lineWidth=2;c.stroke()}
+
+async function saveToggle(k,v){try{await api('config',{method:'POST',body:JSON.stringify({[k]:v})})}catch(e){alert(e.error||'Failed')}}
+async function saveConfig(){const msg=document.getElementById('saveMsg');try{await api('config',{method:'POST',body:JSON.stringify({max_conn_per_ip:+document.getElementById('cRate').value,conn_window_sec:+document.getElementById('cWin').value,cooldown_ms:+document.getElementById('cCool').value,global_join_threshold:+document.getElementById('cFlood').value,attack_cooldown_sec:+document.getElementById('cAtkCool').value,bot_name_regex:document.getElementById('cRegex').value,name_entropy_threshold:+document.getElementById('cEntropy').value,threat_score_threshold:+document.getElementById('cThreat').value,syn_timeout_ms:+document.getElementById('cSyn').value,dynamic_block_base_sec:+document.getElementById('cBanBase').value,dynamic_block_max_sec:+document.getElementById('cBanMax').value,min_protocol_version:+document.getElementById('cProtoMin').value,max_protocol_version:+document.getElementById('cProtoMax').value,kick_message:document.getElementById('cKick').value,lockdown_message:document.getElementById('cLock').value})});msg.className='msg ok';msg.textContent='Saved'}catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}}
+async function addWl(){const ip=document.getElementById('wlIp').value.trim();if(!ip)return;try{await api('whitelist/add',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlList').innerHTML=renderWl(w.ips||[]);document.getElementById('wlIp').value=''}catch(e){alert(e.error||'Failed')}}
+async function rmWl(ip){try{await api('whitelist/remove',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlList').innerHTML=renderWl(w.ips||[])}catch(e){alert(e.error||'Failed')}}
+async function clearAtk(){try{await api('clear',{method:'POST'});const s=await api('status');updateLive(s)}catch(e){alert(e.error||'Failed')}}
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
+load();setInterval(load,5000);
+</script></body></html>

@@ -1,0 +1,37 @@
+# IntegrityPolygon v2.0 Configuration
+# Most settings are configured through the web panel setup wizard.
+#
+# IMPORTANT: If this is a hosted server, set the web port to the port
+# your hosting provider has allocated for web access BEFORE first launch.
+# You can also set the WEB_PORT environment variable to override this.
+
+web:
+  # The port the web panel listens on.
+  # Change this to match the port your hosting provider gave you.
+  # Can also be overridden with the WEB_PORT environment variable.
+  port: 3490
+  # The address to bind to. 0.0.0.0 = all interfaces (accessible externally).
+  bind: "0.0.0.0"
+
+setup:
+  completed: false
+
+modules:
+  hot_reload: true
+
+# Extender TCP socket settings.
+# The extender socket lets Paper servers communicate with the proxy
+# directly over TCP — no players needed to relay messages.
+extender:
+  # The port the extender TCP socket listens on.
+  # Paper servers connect to this port to communicate with the proxy.
+  # Can be overridden with the EXTENDER_PORT environment variable.
+  port: 3491
+  # Shared secret for authenticating extender connections.
+  # This is auto-generated on first launch. Copy it to each
+  # Paper server's IntegrityPolygon-Extender/config.yml
+  secret: ""
+  repository_url: "https://raw.githubusercontent.com/ErikRadoan/IntegrityPolygon-Modules/main/modules.json"
+
+security:
+  checksum_url: "https://raw.githubusercontent.com/ErikRadoan/IntegrityPolygon-Modules/main/checksums.json"

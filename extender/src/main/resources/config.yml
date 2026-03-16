@@ -1,0 +1,32 @@
+# IntegrityPolygon Extender Configuration
+#
+# The extender connects to the IntegrityPolygon proxy plugin via a
+# length-prefixed TCP tunnel. No players need to be online — it connects
+# on server startup and maintains a persistent bidirectional channel.
+
+# A human-readable label for this backend server.
+# This appears in the IntegrityPolygon dashboard (e.g. "lobby", "survival").
+# If left empty, defaults to the Bukkit server name.
+server-label: ""
+
+# Legacy alias for server-label (kept for backward compatibility).
+extender-id: ""
+
+# The hostname/IP of the Velocity proxy running IntegrityPolygon.
+# Use "velocity" if running in Docker with the provided docker-compose.yml
+# Use "localhost" if proxy and Paper run on the same machine
+# Use the public hostname if on a separate server (e.g. "omega.goodhost.cz")
+proxy-host: "velocity"
+
+# The extender TCP socket port on the proxy.
+# This is the "Extender TCP Port" configured during the IntegrityPolygon setup wizard.
+# Check the IntegrityPolygon startup log for "Extender socket : port XXXX"
+# NOTE: This must be an OPEN port on the Velocity server. If your hosting
+#       provider only gives you specific ports, make sure this matches one of them.
+proxy-port: 3491
+
+# Authentication secret.
+# By default, the extender auto-detects the Velocity forwarding secret
+# from Paper's paper-global.yml — no manual configuration needed!
+# Only set this if you want to override the auto-detected secret.
+secret: ""

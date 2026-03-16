@@ -1,0 +1,11 @@
+﻿{
+  "id": "spike-detector",
+  "name": "Spike Detector",
+  "version": "1.0.0",
+  "description": "Detects chunk lag spikes on Paper backends and can trigger automated mitigation for critical chunks.",
+  "author": "ErikRadovan",
+  "icon": "web/icon.svg",
+  "main": "dev.erikradovan.spikedetector.SpikeDetectorModule",
+  "dashboard": "web/"
+}
+

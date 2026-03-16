@@ -1,0 +1,7 @@
+name: IntegrityPolygon-Extender
+version: '1.0.0'
+main: dev.erikradovan.extender.ExtenderPlugin
+api-version: '1.21'
+description: Bridges IntegrityPolygon security modules to Paper server events.
+author: ErikRadovan
+

@@ -1,0 +1,10 @@
+{
+  "id": "identity-enforcement",
+  "name": "Identity Enforcement",
+  "version": "1.0.0",
+  "description": "VPN, proxy, and suspicious IP detection using proxycheck.io. Blocks anonymized connections to protect server integrity.",
+  "author": "ErikRadovan",
+  "main": "dev.erikradovan.identityenforcement.IdentityEnforcementModule",
+  "dashboard": "web/"
+}
+

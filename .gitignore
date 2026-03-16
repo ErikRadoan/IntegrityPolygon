@@ -1,0 +1,23 @@
+﻿# Build outputs
+target/
+**/target/
+dependency-reduced-pom.xml
+
+# IDE
+*.iml
+.idea/
+
+# Build temp files
+*.txt
+!task.txt
+
+# Test environment data (Docker volumes)
+test-env/velocity/plugins/
+test-env/paper/plugins/
+test-env/paper/config/
+test-env/paper/extender-config.yml
+
+# OS
+.DS_Store
+Thumbs.db
+

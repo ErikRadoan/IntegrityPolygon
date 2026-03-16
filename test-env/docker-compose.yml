@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  # ─── Velocity Proxy ───
+  velocity:
+    image: itzg/bungeecord:java21
+    container_name: ip-velocity
+    environment:
+      TYPE: VELOCITY
+      # Accept Minecraft EULA
+      EULA: "TRUE"
+      # Velocity will listen on 25577 inside container
+      VELOCITY_ONLINE_MODE: "false"
+    ports:
+      - "25577:25577"   # Minecraft proxy port
+      - "3490:3490"     # IntegrityPolygon web panel
+      - "3491:3491"     # IntegrityPolygon extender socket
+    volumes:
+      - ./velocity/velocity.toml:/server/velocity.toml
+      - ./velocity/forwarding.secret:/server/forwarding.secret
+      - ./velocity/plugins:/server/plugins
+    networks:
+      - mcnet
+
+  # ─── Paper Backend Server ───
+  paper:
+    image: itzg/minecraft-server:java21
+    container_name: ip-paper
+    restart: unless-stopped
+    environment:
+      TYPE: PAPER
+      VERSION: "1.21.4"
+      EULA: "TRUE"
+      ONLINE_MODE: "FALSE"
+      PAPER_VELOCITY_SECRET: "NQ18ziPvAbrj"
+      JVM_XX_OPTS: "-Xms512M -Xmx1G"
+      SPAWN_PROTECTION: 0
+      DIFFICULTY: peaceful
+      UID: 1000
+      GID: 1000
+    volumes:
+      - paper-data:/data
+      - ./paper/plugins:/data/plugins
+    networks:
+      - mcnet
+
+networks:
+  mcnet:
+    driver: bridge
+
+volumes:
+  paper-data:
+

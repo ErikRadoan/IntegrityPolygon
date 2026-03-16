@@ -1,0 +1,16 @@
+META-INF/
+META-INF/MANIFEST.MF
+dev/
+dev/erikradovan/
+dev/erikradovan/profiler/
+web/
+META-INF/maven/
+META-INF/maven/dev.erikradovan/
+META-INF/maven/dev.erikradovan/profiler/
+dev/erikradovan/profiler/ProfilerModule$ServerProfile.class
+dev/erikradovan/profiler/ProfilerModule.class
+module.json
+profiler-extender.jar
+web/index.html
+META-INF/maven/dev.erikradovan/profiler/pom.xml
+META-INF/maven/dev.erikradovan/profiler/pom.properties

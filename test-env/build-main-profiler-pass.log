@@ -1,0 +1,117 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/C:/Program%20Files/JetBrains/IntelliJ%20IDEA%202025.3.1/plugins/maven/lib/maven3/lib/guice-5.1.0-classes.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< dev.erikradovan:integritypolygon >------------------
+[INFO] Building IntegrityPolygon 2.0.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ integritypolygon ---
+[INFO] Deleting C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ integritypolygon ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ integritypolygon ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 48 source files with javac [debug release 21] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ integritypolygon ---
+[INFO] skip non existing resourceDirectory C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ integritypolygon ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ integritypolygon ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ integritypolygon ---
+[INFO] Building jar: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] 
+[INFO] --- shade:3.6.0:shade (default) @ integritypolygon ---
+[INFO] Including io.javalin:javalin:jar:5.6.5 in the shaded jar.
+[INFO] Including org.jetbrains:annotations:jar:24.0.1 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api:jar:5.0.2 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-http:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-util:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-io:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-webapp:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-security:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-xml:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-common:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-servlet:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-server:jar:11.0.17 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-api:jar:11.0.17 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.8.21 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.8.21 in the shaded jar.
+[INFO] Including com.auth0:java-jwt:jar:4.4.0 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-databind:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-annotations:jar:2.14.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-core:jar:2.14.2 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_common:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_tracer_otel_agent:jar:0.16.0 in the shaded jar.
+[INFO] Including io.prometheus:simpleclient_common:jar:0.16.0 in the shaded jar.
+[INFO] No artifact matching filter jakarta.servlet:*
+[INFO] Minimizing jar dev.erikradovan:integritypolygon:jar:2.0.0-SNAPSHOT
+[WARNING] Removing module-info from integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] Dependency-reduced POM written at: C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\dependency-reduced-pom.xml
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE
+[WARNING] jetty-webapp-11.0.17.jar, websocket-jetty-server-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/org.eclipse.jetty.webapp.Configuration
+[WARNING] annotations-24.0.1.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar define 1 overlapping classes: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE.txt
+[WARNING] jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/LICENSE
+[WARNING] annotations-24.0.1.jar, integritypolygon-2.0.0-SNAPSHOT.jar, jackson-annotations-2.14.2.jar, jackson-core-2.14.2.jar, jackson-databind-2.14.2.jar, java-jwt-4.4.0.jar, javalin-5.6.5.jar, jetty-http-11.0.17.jar, jetty-io-11.0.17.jar, jetty-jakarta-servlet-api-5.0.2.jar, jetty-security-11.0.17.jar, jetty-server-11.0.17.jar, jetty-servlet-11.0.17.jar, jetty-util-11.0.17.jar, jetty-webapp-11.0.17.jar, jetty-xml-11.0.17.jar, kotlin-stdlib-1.8.21.jar, kotlin-stdlib-common-1.8.21.jar, kotlin-stdlib-jdk7-1.8.21.jar, kotlin-stdlib-jdk8-1.8.21.jar, simpleclient-0.16.0.jar, simpleclient_common-0.16.0.jar, simpleclient_tracer_common-0.16.0.jar, simpleclient_tracer_otel-0.16.0.jar, simpleclient_tracer_otel_agent-0.16.0.jar, websocket-core-common-11.0.17.jar, websocket-core-server-11.0.17.jar, websocket-jetty-api-11.0.17.jar, websocket-jetty-common-11.0.17.jar, websocket-jetty-server-11.0.17.jar, websocket-servlet-11.0.17.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Minimized 4681 -> 4534 (96%)
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar with C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT-shaded.jar
+[INFO] 
+[INFO] --- install:3.1.2:install (default-install) @ integritypolygon ---
+[INFO] Installing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\dependency-reduced-pom.xml to C:\Users\erikr\.m2\repository\dev\erikradovan\integritypolygon\2.0.0-SNAPSHOT\integritypolygon-2.0.0-SNAPSHOT.pom
+[INFO] Installing C:\Users\erikr\Projects\IdeaProjects\IntegrityPolygon\target\integritypolygon-2.0.0-SNAPSHOT.jar to C:\Users\erikr\.m2\repository\dev\erikradovan\integritypolygon\2.0.0-SNAPSHOT\integritypolygon-2.0.0-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.520 s
+[INFO] Finished at: 2026-03-12T21:17:46+01:00
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+{
+  "id": "account-protection",
+  "name": "Account Protection",
+  "version": "1.0.0",
+  "description": "Staff account security with TOTP two-factor authentication, session IP locking, and enrollment management.",
+  "author": "ErikRadovan",
+  "main": "dev.erikradovan.accountprotection.AccountProtectionModule",
+  "dashboard": "web/"
+}
+

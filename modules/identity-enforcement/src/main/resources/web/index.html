@@ -1,0 +1,178 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Identity Enforcement</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
+[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
+[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
+[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
+[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
+[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
+body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+.stat .v{font-size:18px;font-weight:700;margin-top:2px}
+.v.red{color:var(--red)}.v.green{color:var(--green)}.v.accent{color:var(--accent)}.v.amber{color:var(--amber)}.v.blue{color:var(--blue)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
+.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
+.sw input{display:none}
+.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
+.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
+.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
+.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.field input{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:8px;align-items:end}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
+.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:10px}
+.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
+.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
+.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+.ip-list{max-height:140px;overflow-y:auto}
+.ip-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;font-family:monospace}
+.ip-row:last-child{border:none}
+.warn-bar{padding:10px 14px;border-radius:var(--r);background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2);font-size:12px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.check-result{padding:12px;background:var(--input);border-radius:6px;margin-top:8px;font-size:12px}
+.check-result .cr-row{display:flex;justify-content:space-between;padding:3px 0}
+.check-result .cr-label{color:var(--dim)}
+</style></head><body>
+<div id="root">Loading...</div>
+<script>
+// ── Theme sync ──
+(function(){
+  const p=new URLSearchParams(location.search),t=p.get('theme');
+  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
+  window.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='ip-theme-change'){
+      const th=e.data.theme;
+      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme',th);
+    }
+  });
+})();
+const token=new URLSearchParams(location.search).get('token'),API=location.origin;
+async function api(p,o={}){const h={'Content-Type':'application/json','Authorization':'Bearer '+token};const r=await fetch(API+'/api/modules/identity-enforcement/'+p,{...o,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
+
+let initialized=false;
+
+async function load(){
+  try{
+    const st=await api('status');
+    if(!initialized){
+      const[cfg,wl]=await Promise.all([api('config'),api('whitelist')]);
+      renderFull(st,cfg,wl);
+      initialized=true;
+    }else{
+      updateStats(st);
+    }
+  }catch(e){
+    if(!initialized) document.getElementById('root').innerHTML='<div style="color:var(--red)">'+esc(e.error||e.message||'Error')+'</div>';
+  }
+}
+
+function renderFull(st,cfg,wl){
+const root=document.getElementById('root');
+root.innerHTML=`
+${!st.api_key_set?'<div class="warn-bar">⚠ API key not configured. Set your proxycheck.io API key below to enable IP checking.</div>':''}
+<div class="grid">
+<div class="stat"><div class="l">Checked</div><div class="v accent" id="vChecked">${st.total_checked}</div></div>
+<div class="stat"><div class="l">Blocked</div><div class="v red" id="vBlocked">${st.total_blocked}</div></div>
+<div class="stat"><div class="l">Allowed</div><div class="v green" id="vAllowed">${st.total_allowed}</div></div>
+<div class="stat"><div class="l">Cache Hits</div><div class="v blue" id="vCache">${st.cache_hits}</div></div>
+<div class="stat"><div class="l">API Calls</div><div class="v" id="vApi">${st.api_calls}</div></div>
+<div class="stat"><div class="l">API Errors</div><div class="v" id="vErrors">${st.api_errors}</div></div>
+<div class="stat"><div class="l">Cache Size</div><div class="v" id="vCacheSize">${st.cache_size}</div></div>
+<div class="stat"><div class="l">Whitelisted</div><div class="v" id="vWl">${st.whitelisted_ips + st.whitelisted_uuids}</div></div>
+</div>
+<div class="cols">
+<div>
+<div class="card"><h3>Settings</h3>
+<div class="tog"><span>Module Enabled</span><label class="sw"><input type="checkbox" data-k="enabled" ${cfg.enabled?'checked':''}><span class="tr"></span></label></div>
+<div class="tog"><span>Block VPNs</span><label class="sw"><input type="checkbox" data-k="block_vpn" ${cfg.block_vpn?'checked':''}><span class="tr"></span></label></div>
+<div class="tog"><span>Block Proxies</span><label class="sw"><input type="checkbox" data-k="block_proxy" ${cfg.block_proxy?'checked':''}><span class="tr"></span></label></div>
+<div class="field" style="margin-top:8px"><label>proxycheck.io API Key</label><input id="cApiKey" type="password" value="${esc(cfg.api_key)}" placeholder="Enter your API key"></div>
+<div class="field"><label>Kick Message</label><input id="cKick" value="${esc(cfg.kick_message)}"></div>
+<div class="field"><label>Cache TTL (minutes)</label><input id="cTtl" type="number" value="${cfg.cache_ttl_minutes}"></div>
+<button class="btn p" onclick="saveConfig()">Save Configuration</button>
+<div id="cfgMsg" class="msg"></div>
+</div>
+<div class="card"><h3>IP Lookup</h3>
+<div class="row"><div class="field" style="margin:0;flex:1"><input id="checkIp" placeholder="Enter IP to check"></div><button class="btn" onclick="manualCheck()">Check</button></div>
+<div id="checkResult"></div>
+</div>
+<div class="card"><h3>Cache</h3>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--dim);font-size:12px" id="cacheInfo">${st.cache_size} entries, TTL: ${cfg.cache_ttl_minutes}m</span><button class="btn sm d" onclick="clearCache()">Clear Cache</button></div>
+</div>
+</div>
+<div>
+<div class="card"><h3>Whitelisted IPs</h3>
+<div class="row" style="margin-bottom:8px"><div class="field" style="margin:0;flex:1"><input id="wlIp" placeholder="e.g. 192.168.1.1"></div><button class="btn" onclick="addWlIp()">Add</button></div>
+<div class="ip-list" id="wlIpList">${renderIpList(wl.ips||[])}</div>
+</div>
+<div class="card"><h3>Whitelisted Player UUIDs</h3>
+<div class="row" style="margin-bottom:8px"><div class="field" style="margin:0;flex:1"><input id="wlUuid" placeholder="Player UUID"></div><button class="btn" onclick="addWlUuid()">Add</button></div>
+<div class="ip-list" id="wlUuidList">${renderUuidList(wl.uuids||[])}</div>
+</div>
+</div>
+</div>`;
+document.querySelectorAll('.sw input').forEach(el=>el.onchange=()=>saveToggle(el.dataset.k,el.checked));
+}
+
+function updateStats(st){
+  const ids={vChecked:st.total_checked,vBlocked:st.total_blocked,vAllowed:st.total_allowed,vCache:st.cache_hits,vApi:st.api_calls,vErrors:st.api_errors,vCacheSize:st.cache_size,vWl:st.whitelisted_ips+st.whitelisted_uuids};
+  for(const[id,val]of Object.entries(ids)){const el=document.getElementById(id);if(el)el.textContent=val;}
+  const ve=document.getElementById('vErrors');if(ve)ve.className=st.api_errors>0?'v amber':'v';
+}
+
+function renderIpList(ips){return ips.length?ips.map(ip=>`<div class="ip-row"><span>${esc(ip)}</span><button class="btn sm d" onclick="rmWlIp('${esc(ip)}')">Remove</button></div>`).join(''):'<div style="color:var(--muted);font-size:11px">No whitelisted IPs</div>'}
+function renderUuidList(uuids){return uuids.length?uuids.map(u=>`<div class="ip-row"><span>${esc(u)}</span><button class="btn sm d" onclick="rmWlUuid('${esc(u)}')">Remove</button></div>`).join(''):'<div style="color:var(--muted);font-size:11px">No whitelisted UUIDs</div>'}
+
+async function saveToggle(k,v){try{await api('config',{method:'POST',body:JSON.stringify({[k]:v})})}catch(e){alert(e.error||'Failed')}}
+async function saveConfig(){
+  const msg=document.getElementById('cfgMsg');
+  try{
+    await api('config',{method:'POST',body:JSON.stringify({
+      api_key:document.getElementById('cApiKey').value,
+      kick_message:document.getElementById('cKick').value,
+      cache_ttl_minutes:+document.getElementById('cTtl').value
+    })});
+    msg.className='msg ok';msg.textContent='Configuration saved';
+  }catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
+}
+async function addWlIp(){const ip=document.getElementById('wlIp').value.trim();if(!ip)return;try{await api('whitelist/add-ip',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlIpList').innerHTML=renderIpList(w.ips||[]);document.getElementById('wlIp').value=''}catch(e){alert(e.error||'Failed')}}
+async function rmWlIp(ip){try{await api('whitelist/remove-ip',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlIpList').innerHTML=renderIpList(w.ips||[])}catch(e){alert(e.error||'Failed')}}
+async function addWlUuid(){const uuid=document.getElementById('wlUuid').value.trim();if(!uuid)return;try{await api('whitelist/add-uuid',{method:'POST',body:JSON.stringify({uuid})});const w=await api('whitelist');document.getElementById('wlUuidList').innerHTML=renderUuidList(w.uuids||[]);document.getElementById('wlUuid').value=''}catch(e){alert(e.error||'Failed')}}
+async function rmWlUuid(uuid){try{await api('whitelist/remove-uuid',{method:'POST',body:JSON.stringify({uuid})});const w=await api('whitelist');document.getElementById('wlUuidList').innerHTML=renderUuidList(w.uuids||[])}catch(e){alert(e.error||'Failed')}}
+async function clearCache(){try{await api('cache/clear',{method:'POST'});const st=await api('status');updateStats(st)}catch(e){alert(e.error||'Failed')}}
+async function manualCheck(){
+  const ip=document.getElementById('checkIp').value.trim(),res=document.getElementById('checkResult');
+  if(!ip)return;
+  res.innerHTML='<div style="color:var(--dim);margin-top:8px">Checking...</div>';
+  try{
+    const d=await api('check',{method:'POST',body:JSON.stringify({ip})});
+    const col=d.is_proxy||d.is_vpn?'var(--red)':'var(--green)';
+    res.innerHTML=`<div class="check-result">
+      <div class="cr-row"><span class="cr-label">IP</span><span style="font-family:monospace">${esc(d.ip)}</span></div>
+      <div class="cr-row"><span class="cr-label">Proxy</span><span style="color:${d.is_proxy?'var(--red)':'var(--green)'}">${d.is_proxy?'Yes':'No'}</span></div>
+      <div class="cr-row"><span class="cr-label">VPN</span><span style="color:${d.is_vpn?'var(--red)':'var(--green)'}">${d.is_vpn?'Yes':'No'}</span></div>
+      <div class="cr-row"><span class="cr-label">Type</span><span>${esc(d.type||'N/A')}</span></div>
+      <div class="cr-row"><span class="cr-label">Provider</span><span>${esc(d.provider||'N/A')}</span></div>
+      <div class="cr-row"><span class="cr-label">Country</span><span>${esc(d.country||'N/A')}</span></div>
+      <div class="cr-row"><span class="cr-label">Risk</span><span style="color:${col}">${d.risk}/100</span></div>
+    </div>`;
+  }catch(e){res.innerHTML=`<div class="msg err">${esc(e.error||'Failed')}</div>`}
+}
+load();setInterval(load,5000);
+</script></body></html>
+
