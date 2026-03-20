@@ -293,6 +293,10 @@ public class WebServer {
         app.patch("/api/config/ports", configRoutes::updatePorts);
         app.get("/api/config/modules/{id}", configRoutes::getModuleConfig);
         app.put("/api/config/modules/{id}", configRoutes::updateModuleConfig);
+        app.get("/api/config/db/export", configRoutes::exportConfigDatabase);
+        app.post("/api/config/db/import", configRoutes::importConfigDatabase);
+        app.get("/api/config/data/export", configRoutes::exportDataBackup);
+        app.post("/api/config/data/import", configRoutes::importDataBackup);
 
         app.get("/api/status", statusRoutes::getStatus);
         app.get("/api/extenders", statusRoutes::getExtenders);

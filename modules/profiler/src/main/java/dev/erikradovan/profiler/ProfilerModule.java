@@ -1,26 +1,22 @@
 package dev.erikradovan.profiler;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.erikradovan.integritypolygon.api.ExtenderMessage;
 import dev.erikradovan.integritypolygon.api.ExtenderService;
+import dev.erikradovan.integritypolygon.api.ModuleConfigOption;
+import dev.erikradovan.integritypolygon.api.ModuleConfigStore;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
+import dev.erikradovan.integritypolygon.api.ModuleStorage;
 import dev.erikradovan.integritypolygon.api.ServiceRegistry;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.*;
 import java.util.concurrent.*;
@@ -50,7 +46,8 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private final Gson gson = new Gson();
 
     private ExtenderService extenderService;
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
+    private ModuleStorage storage;
     private LogManager logManager;
 
     // Per-server profiling state
@@ -67,20 +64,21 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private final ConcurrentHashMap<String, Deque<MetricSample>> historyByServer = new ConcurrentHashMap<>();
     private static final int MAX_HISTORY_POINTS_CAP = 2000;
     private static final long HISTORY_FLUSH_INTERVAL_SEC = 15;
-    private volatile Path historyDbFile;
     private volatile boolean historyDirty;
 
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
+        this.configStore = ctx.getConfigStore();
+        this.storage = ctx.getStorage();
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.extenderService = reg.get(ExtenderService.class).orElse(null);
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
 
+        ensureStorage();
+
         loadConfig();
-        historyDbFile = ctx.getDataDirectory().resolve("history-db.json");
         loadHistoryDatabase();
         ctx.getTaskScheduler().scheduleAtFixedRate(this::flushHistoryIfDirty, HISTORY_FLUSH_INTERVAL_SEC, HISTORY_FLUSH_INTERVAL_SEC, TimeUnit.SECONDS);
 
@@ -164,36 +162,25 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     // ── Config ──────────────────────────────────────────────────
 
     private void loadConfig() {
-        if (configManager == null) return;
-        String id = context.getDescriptor().id();
-        Map<String, Object> cfg = configManager.getModuleConfig(id);
-        if (cfg.isEmpty()) { saveDefaultConfig(); cfg = configManager.getModuleConfig(id); }
-        enabled = boolCfg(cfg, "enabled", true);
-        reportIntervalSec = intCfg(cfg, "report_interval_sec", 10);
-        sampleIntervalMs = intCfg(cfg, "sample_interval_ms", 1);
-        historyMaxPoints = Math.max(20, Math.min(intCfg(cfg, "history_max_points", 180), MAX_HISTORY_POINTS_CAP));
+        if (configStore == null) return;
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enabled", true, false, "Enable profiling collection."),
+                ModuleConfigOption.integer("report_interval_sec", 10, false, "Profiler report interval in seconds."),
+                ModuleConfigOption.integer("sample_interval_ms", 1, false, "Thread sampling interval in milliseconds."),
+                ModuleConfigOption.integer("history_max_points", 180, false, "Maximum retained points per server."),
+                ModuleConfigOption.list("deployed_extenders", List.of(), false, "Tracked extenders with deployed profiler utility.")
+        ));
+
+        enabled = configStore.getBoolean("enabled", true);
+        reportIntervalSec = configStore.getInt("report_interval_sec", 10);
+        sampleIntervalMs = configStore.getInt("sample_interval_ms", 1);
+        historyMaxPoints = Math.max(20, Math.min(configStore.getInt("history_max_points", 180), MAX_HISTORY_POINTS_CAP));
         extendedExtenders.clear();
-        Object deployed = cfg.get("deployed_extenders");
-        if (deployed instanceof List<?> list) {
-            for (Object entry : list) {
-                if (entry != null) {
-                    String extenderId = String.valueOf(entry).trim();
-                    if (!extenderId.isBlank()) {
-                        extendedExtenders.add(extenderId);
-                    }
-                }
+        for (String extenderId : configStore.getStringList("deployed_extenders")) {
+            if (!extenderId.isBlank()) {
+                extendedExtenders.add(extenderId.trim());
             }
         }
-    }
-
-    private void saveDefaultConfig() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("enabled", true);
-        cfg.put("report_interval_sec", 10);
-        cfg.put("sample_interval_ms", 1);
-        cfg.put("history_max_points", 180);
-        cfg.put("deployed_extenders", new ArrayList<String>());
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
     }
 
     private void handleProfilerReady(ExtenderMessage msg) {
@@ -520,13 +507,11 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private void saveDeploymentState() {
-        if (configManager == null || context == null) return;
+        if (configStore == null || context == null) return;
         try {
-            Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
             List<String> deployed = new ArrayList<>(extendedExtenders);
             deployed.sort(String::compareToIgnoreCase);
-            cfg.put("deployed_extenders", deployed);
-            configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+            configStore.set("deployed_extenders", deployed);
         } catch (Exception e) {
             logger.debug("Failed to persist profiler deployment state: {}", e.getMessage());
         }
@@ -602,18 +587,16 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
+        if (configStore == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
         JsonObject b = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
         b.entrySet().forEach(e -> {
             if (e.getValue().isJsonPrimitive()) {
                 var p = e.getValue().getAsJsonPrimitive();
-                if (p.isBoolean()) cfg.put(e.getKey(), p.getAsBoolean());
-                else if (p.isNumber()) cfg.put(e.getKey(), p.getAsNumber());
-                else cfg.put(e.getKey(), p.getAsString());
+                if (p.isBoolean()) configStore.set(e.getKey(), p.getAsBoolean());
+                else if (p.isNumber()) configStore.set(e.getKey(), p.getAsNumber());
+                else configStore.set(e.getKey(), p.getAsString());
             }
         });
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
         loadConfig();
         sendConfigToExtenders();
         log("INFO", "CONFIG", "Configuration updated via dashboard");
@@ -815,47 +798,24 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private void loadHistoryDatabase() {
-        if (historyDbFile == null) return;
+        if (storage == null) return;
         try {
-            Path parent = historyDbFile.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-            if (!Files.exists(historyDbFile)) {
-                return;
-            }
-
-            String raw = Files.readString(historyDbFile);
-            if (raw == null || raw.isBlank()) {
-                return;
-            }
-            JsonObject root = gson.fromJson(raw, JsonObject.class);
-            if (root == null || !root.has("servers") || !root.get("servers").isJsonObject()) {
-                return;
-            }
-
-            JsonObject servers = root.getAsJsonObject("servers");
-            for (String server : servers.keySet()) {
-                JsonElement el = servers.get(server);
-                if (!el.isJsonArray()) continue;
-
-                Deque<MetricSample> history = new ArrayDeque<>();
-                JsonArray arr = el.getAsJsonArray();
-                for (JsonElement sampleEl : arr) {
-                    if (!sampleEl.isJsonObject()) continue;
-                    JsonObject s = sampleEl.getAsJsonObject();
-                    long ts = s.has("ts") ? s.get("ts").getAsLong() : 0L;
-                    double tps = s.has("tps") ? s.get("tps").getAsDouble() : 0D;
-                    double cpu = s.has("cpu") ? s.get("cpu").getAsDouble() : 0D;
-                    history.addLast(new MetricSample(ts, tps, cpu));
+            historyByServer.clear();
+            String table = storage.qualifyTable("history_samples");
+            storage.query("SELECT server_name, ts, tps, cpu FROM " + table + " ORDER BY server_name, ts", rs -> {
+                while (rs.next()) {
+                    String server = rs.getString("server_name");
+                    Deque<MetricSample> history = historyByServer.computeIfAbsent(server, k -> new ArrayDeque<>());
+                    history.addLast(new MetricSample(
+                            rs.getLong("ts"),
+                            rs.getDouble("tps"),
+                            rs.getDouble("cpu")
+                    ));
                     while (history.size() > historyMaxPoints) {
                         history.removeFirst();
                     }
                 }
-                if (!history.isEmpty()) {
-                    historyByServer.put(server, history);
-                }
-            }
+            });
             historyDirty = false;
         } catch (Exception e) {
             logger.warn("Failed to load profiler history database: {}", e.getMessage());
@@ -863,44 +823,27 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private void flushHistoryDatabase() {
-        if (historyDbFile == null) return;
+        if (storage == null) return;
         try {
-            Path parent = historyDbFile.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
+            String table = storage.qualifyTable("history_samples");
+            storage.update("DELETE FROM " + table);
 
-            JsonObject root = new JsonObject();
-            root.addProperty("generated_at", Instant.now().toEpochMilli());
-            root.addProperty("history_max_points", historyMaxPoints);
-
-            JsonObject servers = new JsonObject();
             List<String> names = new ArrayList<>(historyByServer.keySet());
             names.sort(String::compareToIgnoreCase);
             for (String server : names) {
                 Deque<MetricSample> history = historyByServer.get(server);
                 if (history == null) continue;
-
-                JsonArray points = new JsonArray();
                 synchronized (history) {
                     for (MetricSample sample : history) {
-                        JsonObject row = new JsonObject();
-                        row.addProperty("ts", sample.ts);
-                        row.addProperty("tps", round(sample.tps));
-                        row.addProperty("cpu", round(sample.cpu));
-                        points.add(row);
+                        storage.update(
+                                "INSERT INTO " + table + " (server_name, ts, tps, cpu) VALUES (?, ?, ?, ?)",
+                                server,
+                                sample.ts,
+                                round(sample.tps),
+                                round(sample.cpu)
+                        );
                     }
                 }
-                servers.add(server, points);
-            }
-            root.add("servers", servers);
-
-            Path temp = historyDbFile.resolveSibling(historyDbFile.getFileName() + ".tmp");
-            Files.writeString(temp, gson.toJson(root), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-            try {
-                Files.move(temp, historyDbFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (IOException ignored) {
-                Files.move(temp, historyDbFile, StandardCopyOption.REPLACE_EXISTING);
             }
             historyDirty = false;
         } catch (Exception e) {
@@ -908,11 +851,10 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         }
     }
 
-    private boolean boolCfg(Map<String, Object> m, String k, boolean d) {
-        Object v = m.get(k); return v instanceof Boolean b ? b : d;
+    private void ensureStorage() {
+        if (storage == null) return;
+        storage.ensureTable("history_samples", "(server_name TEXT NOT NULL, ts INTEGER NOT NULL, tps REAL NOT NULL, cpu REAL NOT NULL, PRIMARY KEY(server_name, ts))");
     }
-    private int intCfg(Map<String, Object> m, String k, int d) {
-        Object v = m.get(k); return v instanceof Number n ? n.intValue() : d;
-    }
+
 }
 

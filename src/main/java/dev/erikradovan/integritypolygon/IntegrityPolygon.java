@@ -15,6 +15,7 @@ import dev.erikradovan.integritypolygon.core.HttpServiceImpl;
 import dev.erikradovan.integritypolygon.core.ModuleManager;
 import dev.erikradovan.integritypolygon.core.ModuleWatcher;
 import dev.erikradovan.integritypolygon.core.ServiceRegistryImpl;
+import dev.erikradovan.integritypolygon.core.SqliteModuleDatabase;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import dev.erikradovan.integritypolygon.messaging.ExtenderSocketServer;
 import dev.erikradovan.integritypolygon.web.WebServer;
@@ -51,6 +52,7 @@ public class IntegrityPolygon {
     private WebServer webServer;
     private ExtenderSocketServer extenderSocketServer;
     private LogManager logManager;
+    private SqliteModuleDatabase moduleDatabase;
 
     @Inject
     public IntegrityPolygon(Logger logger, ProxyServer proxy, @DataDirectory Path dataDirectory) {
@@ -97,10 +99,16 @@ public class IntegrityPolygon {
         HttpServiceImpl httpService = new HttpServiceImpl();
         serviceRegistry.register(HttpService.class, httpService);
 
+        // Shared SQLite database for module data and config
+        moduleDatabase = new SqliteModuleDatabase(dataDirectory.resolve("integritypolygon.db"), logger);
+        moduleDatabase.init();
+        configManager.setModuleDatabase(moduleDatabase);
+        serviceRegistry.register(SqliteModuleDatabase.class, moduleDatabase);
+
         // Initialize module manager
         moduleManager = new ModuleManager(
                 modulesJarDir, moduleDataDir, serviceRegistry,
-                proxy.getEventManager(), this, logger
+                proxy.getEventManager(), this, moduleDatabase, logger
         );
 
         // Attempt to generate new credentials if first launch (setupWizard handles first launch check)

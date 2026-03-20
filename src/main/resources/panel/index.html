@@ -1453,19 +1453,10 @@
 
   // ── Settings ──
   async function pgSettings(el) {
-    const curTheme = localStorage.getItem('ip_theme') || 'default';
     let webPort = '...', extPort = '...';
     try { const cfg = await api('/api/config'); webPort = cfg?.web?.port || 3490; extPort = cfg?.extender?.port || (webPort + 1); } catch {}
     el.innerHTML = `<div class="page-header fade-in"><h2>Settings</h2><p>Server information and configuration</p></div>
     <div id="portBanner" class="alert" style="display:none;margin-bottom:12px;background:rgba(245,158,11,.08);color:var(--amber);border:1px solid rgba(245,158,11,.2);padding:9px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;font-family:var(--mono)"></div>
-    <div class="card"><h3>Color Theme</h3>
-      <div class="theme-grid" id="themeGrid">
-        ${THEMES.map(t => `<div class="theme-swatch ${t.id===curTheme?'active':''}" data-theme-id="${t.id}" onclick="selectTheme('${t.id}')">
-          <div class="swatch-dots">${t.colors.map(c => '<div class="dot" style="background:'+c+'"></div>').join('')}</div>
-          <div class="swatch-name">${t.name}</div>
-        </div>`).join('')}
-      </div>
-    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card"><h3>Web Panel Port</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Port the web dashboard listens on. Requires restart.</p>
         <div style="display:flex;gap:8px;align-items:flex-end"><div class="field" style="flex:1;margin:0"><label>Port</label><input type="number" id="cfgWebPort" value="${webPort}" min="1024" max="65535"></div><button class="btn" onclick="savePorts()" style="padding:8px 12px;margin-bottom:1px">Save</button></div>
@@ -1475,7 +1466,31 @@
       </div>
     </div>
     <div id="portMsg" class="msg" style="margin-bottom:12px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card"><h3>Configuration Database</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Export/import module config schema and values.</p>
+        <input type="file" id="configImportInput" accept="application/json" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="exportConfigDatabase()">Export Config</button>
+          <button class="btn" onclick="triggerConfigImport()">Import Config</button>
+        </div>
+        <div id="configDbMsg" class="msg" style="margin-top:10px"></div>
+      </div>
+      <div class="card"><h3>Data Backups</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Backup and restore module runtime data tables.</p>
+        <input type="file" id="dataImportInput" accept="application/json" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="exportDataBackup()">Download Backup</button>
+          <button class="btn" onclick="triggerDataImport()">Load Backup</button>
+        </div>
+        <div id="dataBackupMsg" class="msg" style="margin-top:10px"></div>
+      </div>
+    </div>
     <div class="card"><h3>Server Info</h3><div id="serverInfo"><div class="spinner"></div></div></div>`;
+
+    const cfgIn = $('#configImportInput');
+    if (cfgIn) cfgIn.onchange = e => importConfigDatabaseFile(e.target.files?.[0]);
+    const dataIn = $('#dataImportInput');
+    if (dataIn) dataIn.onchange = e => importDataBackupFile(e.target.files?.[0]);
+
     try {
       const s = await api('/api/status');
       $('#serverInfo').innerHTML = `<div class="list-row"><div class="row-name">Java Version</div><div class="row-meta">${esc(s.java_version)}</div></div><div class="list-row"><div class="row-name">Operating System</div><div class="row-meta">${esc(s.os)}</div></div><div class="list-row"><div class="row-name">Uptime</div><div class="row-meta">${esc(s.uptime_formatted)}</div></div><div class="list-row"><div class="row-name">Players Online</div><div class="row-meta">${s.total_players}</div></div>`;
@@ -1498,6 +1513,94 @@
   function selectTheme(id) {
     applyTheme(id);
     document.querySelectorAll('.theme-swatch').forEach(s => s.classList.toggle('active', s.dataset.themeId === id));
+  }
+
+  async function exportConfigDatabase() {
+    const msg = $('#configDbMsg'); if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
+    try {
+      const res = await fetch(API + '/api/config/db/export', { credentials: 'same-origin' });
+      if (!res.ok) throw await res.json().catch(() => ({ error: 'Export failed' }));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'integritypolygon-config-export.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Config export downloaded.'; }
+    } catch (e) {
+      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to export config.'; }
+    }
+  }
+
+  function triggerConfigImport() {
+    const input = $('#configImportInput');
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  async function importConfigDatabaseFile(file) {
+    const msg = $('#configDbMsg');
+    if (!file) return;
+    if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
+    try {
+      const text = await file.text();
+      await api('/api/config/db/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text
+      });
+      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Config database imported successfully.'; }
+    } catch (e) {
+      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to import config database.'; }
+    }
+  }
+
+  async function exportDataBackup() {
+    const msg = $('#dataBackupMsg'); if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
+    try {
+      const res = await fetch(API + '/api/config/data/export', { credentials: 'same-origin' });
+      if (!res.ok) throw await res.json().catch(() => ({ error: 'Backup export failed' }));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'integritypolygon-data-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Data backup downloaded.'; }
+    } catch (e) {
+      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to export backup.'; }
+    }
+  }
+
+  function triggerDataImport() {
+    const input = $('#dataImportInput');
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  async function importDataBackupFile(file) {
+    const msg = $('#dataBackupMsg');
+    if (!file) return;
+    if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
+    try {
+      const text = await file.text();
+      await api('/api/config/data/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text
+      });
+      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Data backup loaded successfully.'; }
+    } catch (e) {
+      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to load backup.'; }
+    }
   }
 
   // ── Account Settings & Policy Modals ──

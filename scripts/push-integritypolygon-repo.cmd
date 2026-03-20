@@ -1,15 +1,18 @@
-﻿@echo off
+@echo off
 setlocal enabledelayedexpansion
 
 set "REMOTE_URL=https://github.com/ErikRadoan/IntegrityPolygon.git"
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "ROOT=%%~fI"
 set "DRY_RUN=0"
+set "FORCE_PUSH=1"
 
 :parse_args
 if "%~1"=="" goto args_done
 if /I "%~1"=="--dry-run" (
     set "DRY_RUN=1"
+) else if /I "%~1"=="--no-force" (
+    set "FORCE_PUSH=0"
 ) else (
     if defined COMMIT_MSG (
         set "COMMIT_MSG=!COMMIT_MSG! %~1"
@@ -51,6 +54,11 @@ echo [INFO] Target repo: "%ROOT%"
 if "%DRY_RUN%"=="1" (
     echo [INFO] Dry-run mode enabled. No commit or push will be performed.
 )
+if "%FORCE_PUSH%"=="1" (
+    echo [INFO] Push mode: force-with-lease
+) else (
+    echo [INFO] Push mode: normal
+)
 
 if "%DRY_RUN%"=="1" (
     echo [INFO] Workspace changes preview:
@@ -83,9 +91,17 @@ if "%DRY_RUN%"=="1" (
     git status --short
     echo [OK] Dry-run completed.
 ) else (
-    git push -u origin "!BRANCH!"
+    git fetch origin "!BRANCH!" >nul 2>&1
+    if "%FORCE_PUSH%"=="1" (
+        git push --force-with-lease -u origin "!BRANCH!"
+    ) else (
+        git push -u origin "!BRANCH!"
+    )
     if errorlevel 1 (
         echo [ERROR] Push failed.
+        if "%FORCE_PUSH%"=="0" (
+            echo [HINT] Remote rejected non-fast-forward update. Re-run without --no-force to use --force-with-lease.
+        )
         popd
         exit /b 1
     )

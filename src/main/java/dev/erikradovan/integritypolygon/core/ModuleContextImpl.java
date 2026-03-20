@@ -17,6 +17,8 @@ public class ModuleContextImpl implements ModuleContext {
     private final ModuleDashboard dashboard;
     private final Logger logger;
     private final Path dataDirectory;
+    private final ModuleStorage storage;
+    private final ModuleConfigStore configStore;
     private final ModuleDescriptor descriptor;
 
     public ModuleContextImpl(
@@ -26,6 +28,8 @@ public class ModuleContextImpl implements ModuleContext {
             ModuleDashboard dashboard,
             Logger logger,
             Path dataDirectory,
+            ModuleStorage storage,
+            ModuleConfigStore configStore,
             ModuleDescriptor descriptor
     ) {
         this.serviceRegistry = serviceRegistry;
@@ -34,6 +38,8 @@ public class ModuleContextImpl implements ModuleContext {
         this.dashboard = dashboard;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
+        this.storage = storage;
+        this.configStore = configStore;
         this.descriptor = descriptor;
     }
 
@@ -65,6 +71,16 @@ public class ModuleContextImpl implements ModuleContext {
     @Override
     public Path getDataDirectory() {
         return dataDirectory;
+    }
+
+    @Override
+    public ModuleStorage getStorage() {
+        return storage;
+    }
+
+    @Override
+    public ModuleConfigStore getConfigStore() {
+        return configStore;
     }
 
     @Override

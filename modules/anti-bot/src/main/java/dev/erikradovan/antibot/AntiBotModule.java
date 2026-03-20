@@ -1,25 +1,23 @@
 package dev.erikradovan.antibot;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.Player;
-import com.velocitypowered.api.proxy.ProxyServer;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
+import dev.erikradovan.integritypolygon.api.ModuleConfigOption;
+import dev.erikradovan.integritypolygon.api.ModuleConfigStore;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
+import dev.erikradovan.integritypolygon.api.ModuleStorage;
 import dev.erikradovan.integritypolygon.api.ServiceRegistry;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.slf4j.Logger;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -90,15 +88,18 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
     private final AtomicInteger currentJoinRate = new AtomicInteger(0);
     private final List<Integer> rateHistory = Collections.synchronizedList(new ArrayList<>());
     // -- Services --
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
+    private ModuleStorage storage;
     private LogManager logManager;
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
+        this.configStore = ctx.getConfigStore();
+        this.storage = ctx.getStorage();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
+        ensureStorage();
         loadConfig();
         loadPersistentData();
         ctx.getEventManager().subscribe(new BotListener());
@@ -112,8 +113,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
     public void onDisable() {
         savePersistentData();
         log("INFO", "LIFECYCLE", "Anti-Bot disabled [" + totalBlocked.get() + " blocked, " + totalAllowed.get() + " allowed, " + totalAttacks.get() + " attacks]");
-        logger.info("Anti-Bot disabled [{} blocked, {} allowed, {} attacks]",
-                totalBlocked.get(), totalAllowed.get(), totalAttacks.get());
     }
     @Override
     public void onReload() {
@@ -127,86 +126,97 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
     // ================================================================
     //  CONFIGURATION
     // ================================================================
-    @SuppressWarnings("unchecked")
     private void loadConfig() {
-        if (configManager == null) return;
-        String id = context.getDescriptor().id();
-        Map<String, Object> cfg = configManager.getModuleConfig(id);
-        if (cfg.isEmpty()) { saveDefaultConfig(); cfg = configManager.getModuleConfig(id); }
-        enableRateLimit = bool(cfg, "enable_rate_limit", true);
-        enableCooldown = bool(cfg, "enable_cooldown", true);
-        enableSpamDetection = bool(cfg, "enable_spam_detection", true);
-        enableFloodDetection = bool(cfg, "enable_flood_detection", true);
-        enableNameFilter = bool(cfg, "enable_name_filter", true);
-        enableHandshakeValidation = bool(cfg, "enable_handshake_validation", true);
-        enableSynFloodDetection = bool(cfg, "enable_syn_flood_detection", true);
-        enableDynamicBlocking = bool(cfg, "enable_dynamic_blocking", true);
-        enableLockdown = bool(cfg, "enable_lockdown", true);
-        maxConnPerIp = num(cfg, "max_conn_per_ip", 3);
-        connWindowSec = num(cfg, "conn_window_sec", 60);
-        cooldownMs = num(cfg, "cooldown_ms", 2000);
-        globalJoinThreshold = num(cfg, "global_join_threshold", 15);
-        attackCooldownSec = num(cfg, "attack_cooldown_sec", 30);
-        botNameRegex = str(cfg, "bot_name_regex", botNameRegex);
-        nameEntropyThreshold = dbl(cfg, "name_entropy_threshold", 1.5);
-        synTimeoutMs = num(cfg, "syn_timeout_ms", 5000);
-        dynamicBlockBaseSec = num(cfg, "dynamic_block_base_sec", 60);
-        dynamicBlockMaxSec = num(cfg, "dynamic_block_max_sec", 3600);
-        threatScoreThreshold = num(cfg, "threat_score_threshold", 5);
-        minProtocolVersion = num(cfg, "min_protocol_version", 47);
-        maxProtocolVersion = num(cfg, "max_protocol_version", 99999);
-        kickMessage = str(cfg, "kick_message", kickMessage);
-        lockdownMessage = str(cfg, "lockdown_message", lockdownMessage);
-        Object wl = cfg.get("whitelisted_ips");
-        if (wl instanceof List<?> list) { whitelistedIps.clear(); list.forEach(ip -> whitelistedIps.add(String.valueOf(ip))); }
-    }
-    private void saveDefaultConfig() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("enable_rate_limit", true);
-        cfg.put("enable_cooldown", true);
-        cfg.put("enable_spam_detection", true);
-        cfg.put("enable_flood_detection", true);
-        cfg.put("enable_name_filter", true);
-        cfg.put("enable_handshake_validation", true);
-        cfg.put("enable_syn_flood_detection", true);
-        cfg.put("enable_dynamic_blocking", true);
-        cfg.put("enable_lockdown", true);
-        cfg.put("max_conn_per_ip", 3);
-        cfg.put("conn_window_sec", 60);
-        cfg.put("cooldown_ms", 2000);
-        cfg.put("global_join_threshold", 15);
-        cfg.put("attack_cooldown_sec", 30);
-        cfg.put("bot_name_regex", "^(Bot|Player|User|Test)_?\\\\d{3,}");
-        cfg.put("name_entropy_threshold", 1.5);
-        cfg.put("syn_timeout_ms", 5000);
-        cfg.put("dynamic_block_base_sec", 60);
-        cfg.put("dynamic_block_max_sec", 3600);
-        cfg.put("threat_score_threshold", 5);
-        cfg.put("min_protocol_version", 47);
-        cfg.put("max_protocol_version", 99999);
-        cfg.put("kick_message", "Connection denied. Please try again later.");
-        cfg.put("lockdown_message", "Server under attack. Only known players may join.");
-        cfg.put("whitelisted_ips", List.of());
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        if (configStore == null) return;
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enable_rate_limit", true, false, "Enable per-IP rate limiting."),
+                ModuleConfigOption.bool("enable_cooldown", true, false, "Enable short reconnect cooldown."),
+                ModuleConfigOption.bool("enable_spam_detection", true, false, "Enable spam login heuristics."),
+                ModuleConfigOption.bool("enable_flood_detection", true, false, "Enable global join burst detection."),
+                ModuleConfigOption.bool("enable_name_filter", true, false, "Enable suspicious username checks."),
+                ModuleConfigOption.bool("enable_handshake_validation", true, false, "Enable protocol checks."),
+                ModuleConfigOption.bool("enable_syn_flood_detection", true, false, "Track incomplete login handshakes."),
+                ModuleConfigOption.bool("enable_dynamic_blocking", true, false, "Escalate bans by threat score."),
+                ModuleConfigOption.bool("enable_lockdown", true, false, "Allow only known players during attacks."),
+                ModuleConfigOption.integer("max_conn_per_ip", 3, false, "Max connections per IP in window."),
+                ModuleConfigOption.integer("conn_window_sec", 60, false, "Rate limit window (seconds)."),
+                ModuleConfigOption.integer("cooldown_ms", 2000, false, "Reconnect cooldown in milliseconds."),
+                ModuleConfigOption.integer("global_join_threshold", 15, false, "Global join burst threshold."),
+                ModuleConfigOption.integer("attack_cooldown_sec", 30, false, "Seconds without bots before attack ends."),
+                ModuleConfigOption.string("bot_name_regex", "^(Bot|Player|User|Test)_?\\\\d{3,}", false, "Regex for known bot naming patterns."),
+                ModuleConfigOption.decimal("name_entropy_threshold", 1.5, false, "Minimum entropy for usernames."),
+                ModuleConfigOption.integer("syn_timeout_ms", 5000, false, "Handshake timeout in milliseconds."),
+                ModuleConfigOption.integer("dynamic_block_base_sec", 60, false, "Base dynamic ban duration."),
+                ModuleConfigOption.integer("dynamic_block_max_sec", 3600, false, "Maximum dynamic ban duration."),
+                ModuleConfigOption.integer("threat_score_threshold", 5, false, "Threat score required to ban."),
+                ModuleConfigOption.integer("min_protocol_version", 47, false, "Minimum accepted protocol version."),
+                ModuleConfigOption.integer("max_protocol_version", 99999, false, "Maximum accepted protocol version."),
+                ModuleConfigOption.string("kick_message", "Connection denied. Please try again later.", false, "Kick message for blocked joins."),
+                ModuleConfigOption.string("lockdown_message", "Server under attack. Only known players may join.", false, "Kick message during lockdown."),
+                ModuleConfigOption.list("whitelisted_ips", List.of(), false, "IP addresses that bypass checks.")
+        ));
+
+        enableRateLimit = configStore.getBoolean("enable_rate_limit", true);
+        enableCooldown = configStore.getBoolean("enable_cooldown", true);
+        enableSpamDetection = configStore.getBoolean("enable_spam_detection", true);
+        enableFloodDetection = configStore.getBoolean("enable_flood_detection", true);
+        enableNameFilter = configStore.getBoolean("enable_name_filter", true);
+        enableHandshakeValidation = configStore.getBoolean("enable_handshake_validation", true);
+        enableSynFloodDetection = configStore.getBoolean("enable_syn_flood_detection", true);
+        enableDynamicBlocking = configStore.getBoolean("enable_dynamic_blocking", true);
+        enableLockdown = configStore.getBoolean("enable_lockdown", true);
+        maxConnPerIp = configStore.getInt("max_conn_per_ip", 3);
+        connWindowSec = configStore.getInt("conn_window_sec", 60);
+        cooldownMs = configStore.getInt("cooldown_ms", 2000);
+        globalJoinThreshold = configStore.getInt("global_join_threshold", 15);
+        attackCooldownSec = configStore.getInt("attack_cooldown_sec", 30);
+        botNameRegex = configStore.getString("bot_name_regex", botNameRegex);
+        nameEntropyThreshold = configStore.getDouble("name_entropy_threshold", 1.5);
+        synTimeoutMs = configStore.getInt("syn_timeout_ms", 5000);
+        dynamicBlockBaseSec = configStore.getInt("dynamic_block_base_sec", 60);
+        dynamicBlockMaxSec = configStore.getInt("dynamic_block_max_sec", 3600);
+        threatScoreThreshold = configStore.getInt("threat_score_threshold", 5);
+        minProtocolVersion = configStore.getInt("min_protocol_version", 47);
+        maxProtocolVersion = configStore.getInt("max_protocol_version", 99999);
+        kickMessage = configStore.getString("kick_message", kickMessage);
+        lockdownMessage = configStore.getString("lockdown_message", lockdownMessage);
+
+        whitelistedIps.clear();
+        whitelistedIps.addAll(configStore.getStringList("whitelisted_ips"));
     }
     // ================================================================
     //  PERSISTENT DATA
     // ================================================================
     private void loadPersistentData() {
-        Path f = context.getDataDirectory().resolve("known_players.json");
-        if (Files.exists(f)) {
-            try {
-                Set<String> s = gson.fromJson(Files.readString(f), new TypeToken<Set<String>>(){}.getType());
-                if (s != null) knownPlayers.addAll(s);
-            } catch (Exception e) { logger.warn("Failed to load known players: {}", e.getMessage()); }
+        if (storage == null) return;
+        knownPlayers.clear();
+        try {
+            String table = storage.qualifyTable("known_players");
+            storage.query("SELECT player_name FROM " + table, rs -> {
+                while (rs.next()) {
+                    knownPlayers.add(rs.getString("player_name"));
+                }
+            });
+        } catch (Exception e) {
+            logger.warn("Failed to load known players: {}", e.getMessage());
         }
     }
     private void savePersistentData() {
+        if (storage == null) return;
         try {
-            Path f = context.getDataDirectory().resolve("known_players.json");
-            Files.createDirectories(f.getParent());
-            Files.writeString(f, gson.toJson(knownPlayers));
-        } catch (Exception e) { logger.warn("Failed to save known players: {}", e.getMessage()); }
+            String table = storage.qualifyTable("known_players");
+            storage.update("DELETE FROM " + table);
+            for (String player : knownPlayers) {
+                storage.update("INSERT INTO " + table + " (player_name) VALUES (?)", player);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to save known players: {}", e.getMessage());
+        }
+    }
+
+    private void ensureStorage() {
+        if (storage == null) return;
+        storage.ensureTable("known_players", "(player_name TEXT PRIMARY KEY)");
     }
     // ================================================================
     //  EVENT LISTENER
@@ -426,10 +436,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
         if (s < 3600) return (s / 60) + "m " + (s % 60) + "s";
         return (s / 3600) + "h " + ((s % 3600) / 60) + "m";
     }
-    private boolean bool(Map<String, Object> m, String k, boolean d) { Object v = m.get(k); return v instanceof Boolean b ? b : d; }
-    private int num(Map<String, Object> m, String k, int d) { Object v = m.get(k); return v instanceof Number n ? n.intValue() : d; }
-    private double dbl(Map<String, Object> m, String k, double d) { Object v = m.get(k); return v instanceof Number n ? n.doubleValue() : d; }
-    private String str(Map<String, Object> m, String k, String d) { Object v = m.get(k); return v != null ? v.toString() : d; }
     // ================================================================
     //  DASHBOARD REST API
     // ================================================================
@@ -493,18 +499,16 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
         ctx.json(c);
     }
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
+        if (configStore == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
         JsonObject b = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
         b.entrySet().forEach(e -> {
             if (e.getValue().isJsonPrimitive()) {
                 var p = e.getValue().getAsJsonPrimitive();
-                if (p.isBoolean()) cfg.put(e.getKey(), p.getAsBoolean());
-                else if (p.isNumber()) cfg.put(e.getKey(), p.getAsNumber());
-                else cfg.put(e.getKey(), p.getAsString());
+                if (p.isBoolean()) configStore.set(e.getKey(), p.getAsBoolean());
+                else if (p.isNumber()) configStore.set(e.getKey(), p.getAsNumber());
+                else configStore.set(e.getKey(), p.getAsString());
             }
         });
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
         loadConfig();
         log("INFO", "CONFIG", "Configuration updated via dashboard");
         ctx.json(Map.of("success", true));
@@ -536,9 +540,7 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
         ctx.json(Map.of("success", true));
     }
     private void saveWhitelist() {
-        if (configManager == null) return;
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        cfg.put("whitelisted_ips", new ArrayList<>(whitelistedIps));
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        if (configStore == null) return;
+        configStore.set("whitelisted_ips", new ArrayList<>(whitelistedIps));
     }
 }

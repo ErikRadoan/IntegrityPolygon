@@ -1,5 +1,6 @@
 package dev.erikradovan.integritypolygon.config;
 
+import dev.erikradovan.integritypolygon.core.SqliteModuleDatabase;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
@@ -16,6 +17,7 @@ public class ConfigManager {
     private final Path dataDirectory;
     private final Path mainConfigFile;
     private volatile Map<String, Object> mainConfig;
+    private volatile SqliteModuleDatabase moduleDatabase;
     private final Yaml yaml = new Yaml();
 
     public ConfigManager(Path dataDirectory) {
@@ -133,31 +135,30 @@ public class ConfigManager {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getModuleConfig(String moduleId) {
-        Path moduleConfigFile = dataDirectory.resolve("modules").resolve(moduleId).resolve("config.yml");
-        if (!Files.exists(moduleConfigFile)) return new LinkedHashMap<>();
-
-        try (InputStream in = Files.newInputStream(moduleConfigFile)) {
-            Map<String, Object> loaded = yaml.load(in);
-            return loaded != null ? loaded : new LinkedHashMap<>();
-        } catch (IOException e) {
+        SqliteModuleDatabase db = moduleDatabase;
+        if (db == null) {
             return new LinkedHashMap<>();
         }
+        return new LinkedHashMap<>(db.getModuleConfigMap(moduleId));
     }
 
     /**
      * Save a module's config.
      */
     public void saveModuleConfig(String moduleId, Map<String, Object> config) {
-        Path moduleConfigDir = dataDirectory.resolve("modules").resolve(moduleId);
-        try {
-            Files.createDirectories(moduleConfigDir);
-            Path moduleConfigFile = moduleConfigDir.resolve("config.yml");
-            try (Writer writer = Files.newBufferedWriter(moduleConfigFile)) {
-                yaml.dump(config, writer);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save module config for " + moduleId, e);
+        SqliteModuleDatabase db = moduleDatabase;
+        if (db == null) {
+            throw new IllegalStateException("Module database is not initialized yet");
         }
+        db.saveModuleConfigMap(moduleId, config);
+    }
+
+    public void setModuleDatabase(SqliteModuleDatabase moduleDatabase) {
+        this.moduleDatabase = moduleDatabase;
+    }
+
+    public Optional<SqliteModuleDatabase> getModuleDatabase() {
+        return Optional.ofNullable(moduleDatabase);
     }
 
     // ──────── Helpers ────────

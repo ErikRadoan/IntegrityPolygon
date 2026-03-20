@@ -3,8 +3,10 @@ package dev.erikradovan.integritypolygon.web.routes;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import dev.erikradovan.integritypolygon.config.ConfigManager;
+import dev.erikradovan.integritypolygon.core.SqliteModuleDatabase;
 import io.javalin.http.Context;
 
+import java.time.Instant;
 import java.util.Map;
 
 /**
@@ -104,6 +106,45 @@ public class ConfigRoutes {
                 new TypeToken<Map<String, Object>>() {}.getType());
         configManager.saveModuleConfig(moduleId, config);
         ctx.json(Map.of("success", true));
+    }
+
+    /** GET /api/config/db/export — exports module config schema/values snapshot JSON. */
+    public void exportConfigDatabase(Context ctx) {
+        SqliteModuleDatabase db = requireModuleDatabase();
+        String payload = db.exportConfigSnapshotJson();
+        String fileName = "integritypolygon-config-export-" + Instant.now().toEpochMilli() + ".json";
+        ctx.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        ctx.contentType("application/json");
+        ctx.result(payload);
+    }
+
+    /** POST /api/config/db/import — imports module config schema/values snapshot JSON. */
+    public void importConfigDatabase(Context ctx) {
+        SqliteModuleDatabase db = requireModuleDatabase();
+        db.importConfigSnapshotJson(ctx.body());
+        ctx.json(Map.of("success", true));
+    }
+
+    /** GET /api/config/data/export — exports module data tables backup JSON. */
+    public void exportDataBackup(Context ctx) {
+        SqliteModuleDatabase db = requireModuleDatabase();
+        String payload = db.exportDataBackupJson();
+        String fileName = "integritypolygon-data-backup-" + Instant.now().toEpochMilli() + ".json";
+        ctx.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        ctx.contentType("application/json");
+        ctx.result(payload);
+    }
+
+    /** POST /api/config/data/import — imports module data tables backup JSON. */
+    public void importDataBackup(Context ctx) {
+        SqliteModuleDatabase db = requireModuleDatabase();
+        db.importDataBackupJson(ctx.body());
+        ctx.json(Map.of("success", true));
+    }
+
+    private SqliteModuleDatabase requireModuleDatabase() {
+        return configManager.getModuleDatabase()
+                .orElseThrow(() -> new IllegalStateException("Module database is not initialized"));
     }
 }
 

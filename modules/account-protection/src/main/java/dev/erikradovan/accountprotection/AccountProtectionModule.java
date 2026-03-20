@@ -2,7 +2,6 @@ package dev.erikradovan.accountprotection;
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
@@ -11,10 +10,12 @@ import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
+import dev.erikradovan.integritypolygon.api.ModuleConfigOption;
+import dev.erikradovan.integritypolygon.api.ModuleConfigStore;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
+import dev.erikradovan.integritypolygon.api.ModuleStorage;
 import dev.erikradovan.integritypolygon.api.ServiceRegistry;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,8 +23,6 @@ import org.slf4j.Logger;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -46,7 +45,8 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
     private volatile boolean enableSessionLocking = true;
     private volatile boolean enable2fa = true;
     // Services
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
+    private ModuleStorage storage;
     private ProxyServer proxyServer;
     private LogManager logManager;
     private dev.erikradovan.integritypolygon.api.ExtenderService extenderService;
@@ -54,13 +54,15 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
+        this.configStore = ctx.getConfigStore();
+        this.storage = ctx.getStorage();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.proxyServer = reg.get(ProxyServer.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
         this.extenderService = reg.get(dev.erikradovan.integritypolygon.api.ExtenderService.class).orElse(null);
         totp = new TimeBasedOneTimePasswordGenerator(Duration.ofSeconds(30));
 
+        ensureStorage();
         loadStaffRegistry();
         loadConfig();
         ctx.getEventManager().subscribe(new AuthListener());
@@ -164,32 +166,54 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
     //  CONFIG
     // ================================================================
     private void loadConfig() {
-        if (configManager == null) return;
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        enableSessionLocking = cfg.getOrDefault("enable_session_locking", true) instanceof Boolean b ? b : true;
-        enable2fa = cfg.getOrDefault("enable_2fa", true) instanceof Boolean b2 ? b2 : true;
+        if (configStore == null) return;
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enable_session_locking", true, false, "Lock staff sessions to last trusted IP."),
+                ModuleConfigOption.bool("enable_2fa", true, false, "Require TOTP verification for staff logins.")
+        ));
+        enableSessionLocking = configStore.getBoolean("enable_session_locking", true);
+        enable2fa = configStore.getBoolean("enable_2fa", true);
     }
     // ================================================================
     //  STAFF REGISTRY PERSISTENCE
     // ================================================================
-    @SuppressWarnings("unchecked")
     private void loadStaffRegistry() {
-        Path f = context.getDataDirectory().resolve("staff.json");
-        if (Files.exists(f)) {
-            try {
-                Map<String, StaffEntry> loaded = gson.fromJson(Files.readString(f),
-                        new TypeToken<Map<String, StaffEntry>>(){}.getType());
-                if (loaded != null) { staff.clear(); staff.putAll(loaded); }
-                logger.info("Loaded {} staff accounts", staff.size());
-            } catch (Exception e) { logger.warn("Failed to load staff registry: {}", e.getMessage()); }
+        if (storage == null) return;
+        staff.clear();
+        try {
+            String table = storage.qualifyTable("staff_registry");
+            storage.query("SELECT username, data_json FROM " + table, rs -> {
+                while (rs.next()) {
+                    String username = rs.getString("username");
+                    String dataJson = rs.getString("data_json");
+                    StaffEntry entry = gson.fromJson(dataJson, StaffEntry.class);
+                    if (entry != null && username != null) {
+                        staff.put(username, entry);
+                    }
+                }
+            });
+            logger.info("Loaded {} staff accounts", staff.size());
+        } catch (Exception e) {
+            logger.warn("Failed to load staff registry: {}", e.getMessage());
         }
     }
     private void saveStaffRegistry() {
+        if (storage == null) return;
         try {
-            Path f = context.getDataDirectory().resolve("staff.json");
-            Files.createDirectories(f.getParent());
-            Files.writeString(f, gson.toJson(staff));
-        } catch (Exception e) { logger.warn("Failed to save staff registry: {}", e.getMessage()); }
+            String table = storage.qualifyTable("staff_registry");
+            storage.update("DELETE FROM " + table);
+            for (Map.Entry<String, StaffEntry> entry : staff.entrySet()) {
+                storage.update("INSERT INTO " + table + " (username, data_json) VALUES (?, ?)",
+                        entry.getKey(), gson.toJson(entry.getValue()));
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to save staff registry: {}", e.getMessage());
+        }
+    }
+
+    private void ensureStorage() {
+        if (storage == null) return;
+        storage.ensureTable("staff_registry", "(username TEXT PRIMARY KEY, data_json TEXT NOT NULL)");
     }
     // ================================================================
     //  TOTP LOGIC
@@ -518,12 +542,10 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
         ctx.json(Map.of("enable_session_locking", enableSessionLocking, "enable_2fa", enable2fa));
     }
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
+        if (configStore == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
         JsonObject b = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        if (b.has("enable_session_locking")) cfg.put("enable_session_locking", b.get("enable_session_locking").getAsBoolean());
-        if (b.has("enable_2fa")) cfg.put("enable_2fa", b.get("enable_2fa").getAsBoolean());
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        if (b.has("enable_session_locking")) configStore.set("enable_session_locking", b.get("enable_session_locking").getAsBoolean());
+        if (b.has("enable_2fa")) configStore.set("enable_2fa", b.get("enable_2fa").getAsBoolean());
         loadConfig();
         log("INFO", "CONFIG", "Configuration updated via dashboard");
         ctx.json(Map.of("success", true));

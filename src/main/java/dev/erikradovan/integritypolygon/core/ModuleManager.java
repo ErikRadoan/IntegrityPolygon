@@ -35,6 +35,7 @@ public class ModuleManager {
     private final EventManager velocityEventManager;
     private final Object pluginInstance;
     private final Logger logger;
+    private final SqliteModuleDatabase moduleDatabase;
     private final Map<String, LoadedModule> loadedModules = new ConcurrentHashMap<>();
 
     // Shared across all modules — daemon threads, configurable pool size
@@ -45,13 +46,15 @@ public class ModuleManager {
     private RealtimeHandler realtimeHandler;
 
     public ModuleManager(Path modulesDir, Path modulesDataDir, ServiceRegistry serviceRegistry,
-                         EventManager velocityEventManager, Object pluginInstance, Logger logger) {
+                         EventManager velocityEventManager, Object pluginInstance,
+                         SqliteModuleDatabase moduleDatabase, Logger logger) {
         this.modulesDir = modulesDir;
         this.modulesDataDir = modulesDataDir;
         this.dashboardDir = modulesDataDir.getParent().resolve("dashboards");
         this.serviceRegistry = serviceRegistry;
         this.velocityEventManager = velocityEventManager;
         this.pluginInstance = pluginInstance;
+        this.moduleDatabase = moduleDatabase;
         this.logger = logger;
         this.sharedScheduler = Executors.newScheduledThreadPool(4, r -> {
             Thread t = new Thread(r, "IP-Scheduler");
@@ -149,7 +152,10 @@ public class ModuleManager {
 
         ModuleContextImpl context = new ModuleContextImpl(
                 serviceRegistry, eventMgr, taskScheduler, dashboard,
-                moduleLogger, moduleDataDir, descriptor);
+                moduleLogger, moduleDataDir,
+                moduleDatabase.createModuleStorage(descriptor.id()),
+                moduleDatabase.createModuleConfigStore(descriptor.id()),
+                descriptor);
 
         module.onEnable(context);
         loadedModules.put(descriptor.id(), new LoadedModule(module, descriptor, context, classLoader));

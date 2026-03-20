@@ -6,11 +6,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.erikradovan.integritypolygon.api.ExtenderMessage;
 import dev.erikradovan.integritypolygon.api.ExtenderService;
+import dev.erikradovan.integritypolygon.api.ModuleConfigOption;
+import dev.erikradovan.integritypolygon.api.ModuleConfigStore;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
 import dev.erikradovan.integritypolygon.api.ServiceRegistry;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import com.velocitypowered.api.proxy.ProxyServer;
 
@@ -42,7 +43,7 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
 
     private ModuleContext context;
     private ExtenderService extenderService;
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
     private LogManager logManager;
     private ProxyServer proxyServer;
 
@@ -63,10 +64,10 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
+        this.configStore = ctx.getConfigStore();
 
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.extenderService = reg.get(ExtenderService.class).orElse(null);
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
         this.proxyServer = reg.get(ProxyServer.class).orElse(null);
 
@@ -98,37 +99,29 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     }
 
     private void loadConfig() {
-        if (configManager == null) {
+        if (configStore == null) {
             return;
         }
 
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        if (cfg.isEmpty()) {
-            saveDefaults();
-            cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        }
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enabled", true, false, "Enable spike detection."),
+                ModuleConfigOption.integer("profiling_interval_sec", 12, false, "How often to request profiling reports."),
+                ModuleConfigOption.integer("top_chunks", 40, false, "Chunk count requested from profiler."),
+                ModuleConfigOption.decimal("warn_tick_ms", 75.0, false, "Warn threshold for chunk tick time."),
+                ModuleConfigOption.decimal("critical_tick_ms", 140.0, false, "Critical threshold for chunk tick time."),
+                ModuleConfigOption.integer("default_entity_warn", 250, false, "Entity warn threshold per chunk."),
+                ModuleConfigOption.integer("default_tile_warn", 100, false, "Tile entity warn threshold per chunk."),
+                ModuleConfigOption.bool("auto_mitigate_critical", true, false, "Auto-run mitigation for critical spikes.")
+        ));
 
-        enabled = boolCfg(cfg, "enabled", true);
-        profilingIntervalSec = intCfg(cfg, "profiling_interval_sec", 12);
-        topChunks = intCfg(cfg, "top_chunks", 40);
-        warnTickMs = dblCfg(cfg, "warn_tick_ms", 75.0);
-        criticalTickMs = dblCfg(cfg, "critical_tick_ms", 140.0);
-        defaultEntityWarn = intCfg(cfg, "default_entity_warn", 250);
-        defaultTileWarn = intCfg(cfg, "default_tile_warn", 100);
-        autoMitigateCritical = boolCfg(cfg, "auto_mitigate_critical", true);
-    }
-
-    private void saveDefaults() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("enabled", true);
-        cfg.put("profiling_interval_sec", 12);
-        cfg.put("top_chunks", 40);
-        cfg.put("warn_tick_ms", 75.0);
-        cfg.put("critical_tick_ms", 140.0);
-        cfg.put("default_entity_warn", 250);
-        cfg.put("default_tile_warn", 100);
-        cfg.put("auto_mitigate_critical", true);
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        enabled = configStore.getBoolean("enabled", true);
+        profilingIntervalSec = configStore.getInt("profiling_interval_sec", 12);
+        topChunks = configStore.getInt("top_chunks", 40);
+        warnTickMs = configStore.getDouble("warn_tick_ms", 75.0);
+        criticalTickMs = configStore.getDouble("critical_tick_ms", 140.0);
+        defaultEntityWarn = configStore.getInt("default_entity_warn", 250);
+        defaultTileWarn = configStore.getInt("default_tile_warn", 100);
+        autoMitigateCritical = configStore.getBoolean("auto_mitigate_critical", true);
     }
 
     private void requestProfiles() {
@@ -343,27 +336,24 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     }
 
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) {
+        if (configStore == null) {
             ctx.status(500).json(Map.of("error", "Config unavailable"));
             return;
         }
 
         JsonObject body = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
         body.entrySet().forEach(e -> {
             if (e.getValue().isJsonPrimitive()) {
                 var p = e.getValue().getAsJsonPrimitive();
                 if (p.isBoolean()) {
-                    cfg.put(e.getKey(), p.getAsBoolean());
+                    configStore.set(e.getKey(), p.getAsBoolean());
                 } else if (p.isNumber()) {
-                    cfg.put(e.getKey(), p.getAsNumber());
+                    configStore.set(e.getKey(), p.getAsNumber());
                 } else {
-                    cfg.put(e.getKey(), p.getAsString());
+                    configStore.set(e.getKey(), p.getAsString());
                 }
             }
         });
-
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
         loadConfig();
         ctx.json(Map.of("success", true));
     }
@@ -385,20 +375,6 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         }
     }
 
-    private boolean boolCfg(Map<String, Object> map, String key, boolean def) {
-        Object v = map.get(key);
-        return v instanceof Boolean b ? b : def;
-    }
-
-    private int intCfg(Map<String, Object> map, String key, int def) {
-        Object v = map.get(key);
-        return v instanceof Number n ? n.intValue() : def;
-    }
-
-    private double dblCfg(Map<String, Object> map, String key, double def) {
-        Object v = map.get(key);
-        return v instanceof Number n ? n.doubleValue() : def;
-    }
 
     static class ServerState {
         final String id;

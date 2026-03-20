@@ -7,7 +7,6 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import dev.erikradovan.integritypolygon.api.*;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -52,15 +51,15 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
     private final AtomicLong apiCalls = new AtomicLong(0);
     private final AtomicLong apiErrors = new AtomicLong(0);
 
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
     private LogManager logManager;
 
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
+        this.configStore = ctx.getConfigStore();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
 
         loadConfig();
@@ -91,33 +90,28 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
     // ── Config ──
 
     private void loadConfig() {
-        if (configManager == null) return;
-        String id = context.getDescriptor().id();
-        Map<String, Object> cfg = configManager.getModuleConfig(id);
-        if (cfg.isEmpty()) { saveDefaultConfig(); cfg = configManager.getModuleConfig(id); }
-        enabled = bool(cfg, "enabled", true);
-        blockVpn = bool(cfg, "block_vpn", true);
-        blockProxy = bool(cfg, "block_proxy", true);
-        apiKey = str(cfg, "api_key", "");
-        kickMessage = str(cfg, "kick_message", kickMessage);
-        cacheTtlMinutes = num(cfg, "cache_ttl_minutes", 60);
-        Object wlIps = cfg.get("whitelisted_ips");
-        if (wlIps instanceof List<?> list) { whitelistedIps.clear(); list.forEach(ip -> whitelistedIps.add(String.valueOf(ip))); }
-        Object wlUuids = cfg.get("whitelisted_uuids");
-        if (wlUuids instanceof List<?> list) { whitelistedUuids.clear(); list.forEach(u -> whitelistedUuids.add(String.valueOf(u))); }
-    }
+        if (configStore == null) return;
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enabled", true, false, "Enable identity checks for incoming connections."),
+                ModuleConfigOption.bool("block_vpn", true, false, "Block VPN connections reported by proxycheck.io."),
+                ModuleConfigOption.bool("block_proxy", true, false, "Block proxy connections reported by proxycheck.io."),
+                ModuleConfigOption.string("api_key", "", false, "proxycheck.io API key."),
+                ModuleConfigOption.string("kick_message", "VPN/Proxy connections are not allowed on this server.", false, "Kick message for blocked clients."),
+                ModuleConfigOption.integer("cache_ttl_minutes", 60, false, "IP/subnet cache TTL in minutes."),
+                ModuleConfigOption.list("whitelisted_ips", List.of(), false, "Exact whitelisted IPs."),
+                ModuleConfigOption.list("whitelisted_uuids", List.of(), false, "Whitelisted UUID values.")
+        ));
 
-    private void saveDefaultConfig() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("enabled", true);
-        cfg.put("block_vpn", true);
-        cfg.put("block_proxy", true);
-        cfg.put("api_key", "");
-        cfg.put("kick_message", "VPN/Proxy connections are not allowed on this server.");
-        cfg.put("cache_ttl_minutes", 60);
-        cfg.put("whitelisted_ips", List.of());
-        cfg.put("whitelisted_uuids", List.of());
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        enabled = configStore.getBoolean("enabled", true);
+        blockVpn = configStore.getBoolean("block_vpn", true);
+        blockProxy = configStore.getBoolean("block_proxy", true);
+        apiKey = configStore.getString("api_key", "");
+        kickMessage = configStore.getString("kick_message", kickMessage);
+        cacheTtlMinutes = configStore.getInt("cache_ttl_minutes", 60);
+        whitelistedIps.clear();
+        whitelistedIps.addAll(configStore.getStringList("whitelisted_ips"));
+        whitelistedUuids.clear();
+        whitelistedUuids.addAll(configStore.getStringList("whitelisted_uuids"));
     }
 
     // ── Event Listener ──
@@ -278,16 +272,14 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
     }
 
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
+        if (configStore == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
         JsonObject b = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
         b.entrySet().forEach(e -> { if (e.getValue().isJsonPrimitive()) {
             var p = e.getValue().getAsJsonPrimitive();
-            if (p.isBoolean()) cfg.put(e.getKey(), p.getAsBoolean());
-            else if (p.isNumber()) cfg.put(e.getKey(), p.getAsNumber());
-            else cfg.put(e.getKey(), p.getAsString());
+            if (p.isBoolean()) configStore.set(e.getKey(), p.getAsBoolean());
+            else if (p.isNumber()) configStore.set(e.getKey(), p.getAsNumber());
+            else configStore.set(e.getKey(), p.getAsString());
         }});
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
         loadConfig(); log("INFO", "CONFIG", "Configuration updated via dashboard");
         ctx.json(Map.of("success", true));
     }
@@ -341,15 +333,9 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
     }
 
     private void saveWhitelist() {
-        if (configManager == null) return;
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        cfg.put("whitelisted_ips", new ArrayList<>(whitelistedIps));
-        cfg.put("whitelisted_uuids", new ArrayList<>(whitelistedUuids));
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        if (configStore == null) return;
+        configStore.set("whitelisted_ips", new ArrayList<>(whitelistedIps));
+        configStore.set("whitelisted_uuids", new ArrayList<>(whitelistedUuids));
     }
-
-    private boolean bool(Map<String, Object> m, String k, boolean d) { Object v = m.get(k); return v instanceof Boolean b ? b : d; }
-    private int num(Map<String, Object> m, String k, int d) { Object v = m.get(k); return v instanceof Number n ? n.intValue() : d; }
-    private String str(Map<String, Object> m, String k, String d) { Object v = m.get(k); return v != null ? v.toString() : d; }
 }
 

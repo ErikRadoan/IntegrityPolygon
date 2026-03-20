@@ -7,7 +7,6 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import dev.erikradovan.integritypolygon.api.*;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
-import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -62,15 +61,15 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
     // Top countries stats
     private final ConcurrentHashMap<String, AtomicLong> countryStats = new ConcurrentHashMap<>();
 
-    private ConfigManager configManager;
+    private ModuleConfigStore configStore;
     private LogManager logManager;
 
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
+        this.configStore = ctx.getConfigStore();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
 
         loadConfig();
@@ -100,31 +99,24 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
 
     // ── Config ──
 
-    @SuppressWarnings("unchecked")
     private void loadConfig() {
-        if (configManager == null) return;
-        String id = context.getDescriptor().id();
-        Map<String, Object> cfg = configManager.getModuleConfig(id);
-        if (cfg.isEmpty()) { saveDefaultConfig(); cfg = configManager.getModuleConfig(id); }
-        enabled = bool(cfg, "enabled", true);
-        mode = str(cfg, "mode", "blacklist");
-        kickMessage = str(cfg, "kick_message", kickMessage);
-        cacheTtlMinutes = num(cfg, "cache_ttl_minutes", 120);
-        Object cl = cfg.get("country_list");
-        countryList.clear();
-        if (cl instanceof List<?> list) {
-            list.forEach(c -> countryList.add(String.valueOf(c).toUpperCase()));
-        }
-    }
+        if (configStore == null) return;
+        configStore.registerOptions(List.of(
+                ModuleConfigOption.bool("enabled", true, false, "Enable geolocation filtering."),
+                ModuleConfigOption.string("mode", "blacklist", false, "Filtering mode: blacklist or whitelist."),
+                ModuleConfigOption.string("kick_message", "Connections from your country are not allowed.", false, "Kick message for blocked countries."),
+                ModuleConfigOption.integer("cache_ttl_minutes", 120, false, "IP/subnet geolocation cache TTL."),
+                ModuleConfigOption.list("country_list", List.of(), false, "Configured ISO country list.")
+        ));
 
-    private void saveDefaultConfig() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("enabled", true);
-        cfg.put("mode", "blacklist");
-        cfg.put("kick_message", "Connections from your country are not allowed.");
-        cfg.put("cache_ttl_minutes", 120);
-        cfg.put("country_list", List.of());
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        enabled = configStore.getBoolean("enabled", true);
+        mode = configStore.getString("mode", "blacklist");
+        kickMessage = configStore.getString("kick_message", kickMessage);
+        cacheTtlMinutes = configStore.getInt("cache_ttl_minutes", 120);
+        countryList.clear();
+        for (String c : configStore.getStringList("country_list")) {
+            countryList.add(c.toUpperCase());
+        }
     }
 
     // ── Event Listener ──
@@ -268,16 +260,14 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
     }
 
     private void apiSaveConfig(RequestContext ctx) {
-        if (configManager == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
+        if (configStore == null) { ctx.status(500).json(Map.of("error", "Config unavailable")); return; }
         JsonObject b = gson.fromJson(ctx.body(), JsonObject.class);
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
         b.entrySet().forEach(e -> { if (e.getValue().isJsonPrimitive()) {
             var p = e.getValue().getAsJsonPrimitive();
-            if (p.isBoolean()) cfg.put(e.getKey(), p.getAsBoolean());
-            else if (p.isNumber()) cfg.put(e.getKey(), p.getAsNumber());
-            else cfg.put(e.getKey(), p.getAsString());
+            if (p.isBoolean()) configStore.set(e.getKey(), p.getAsBoolean());
+            else if (p.isNumber()) configStore.set(e.getKey(), p.getAsNumber());
+            else configStore.set(e.getKey(), p.getAsString());
         }});
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
         loadConfig(); log("INFO", "CONFIG", "Configuration updated via dashboard");
         ctx.json(Map.of("success", true));
     }
@@ -342,14 +332,8 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
     }
 
     private void saveCountryList() {
-        if (configManager == null) return;
-        Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
-        cfg.put("country_list", new ArrayList<>(countryList));
-        configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        if (configStore == null) return;
+        configStore.set("country_list", new ArrayList<>(countryList));
     }
-
-    private boolean bool(Map<String, Object> m, String k, boolean d) { Object v = m.get(k); return v instanceof Boolean b ? b : d; }
-    private int num(Map<String, Object> m, String k, int d) { Object v = m.get(k); return v instanceof Number n ? n.intValue() : d; }
-    private String str(Map<String, Object> m, String k, String d) { Object v = m.get(k); return v != null ? v.toString() : d; }
 }
 

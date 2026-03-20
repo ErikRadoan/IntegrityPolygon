@@ -42,6 +42,16 @@ public interface ModuleContext {
     Path getDataDirectory();
 
     /**
+     * @return module-scoped SQLite storage helper for creating/querying tables
+     */
+    ModuleStorage getStorage();
+
+    /**
+     * @return module-scoped centralized typed config store
+     */
+    ModuleConfigStore getConfigStore();
+
+    /**
      * @return this module's descriptor (metadata from module.json)
      */
     ModuleDescriptor getDescriptor();

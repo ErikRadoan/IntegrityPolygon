@@ -1,19 +1,23 @@
-﻿﻿# IntegrityPolygon — Module API Documentation
+﻿# IntegrityPolygon — Module API Documentation
 
 ## Overview
 
-IntegrityPolygon is a modular server security framework for Velocity proxy servers.  
-Modules are self-contained JAR files that are hot-loaded at runtime, each providing specific
-security functionality (anti-bot, account protection, VPN blocking, geo-filtering, etc.).
+IntegrityPolygon modules are hot-loaded JARs for the Velocity plugin.
+Each module can:
 
-Every module ships with its own **embedded dashboard** (HTML/CSS/JS) which is automatically
-extracted and served as a sub-page in the main IntegrityPolygon web panel.
+- register Velocity event listeners
+- register module dashboard API routes under `/api/modules/{id}/...`
+- push realtime updates to `/ws/live`
+- communicate with Paper servers through `ExtenderService`
+- persist data and configuration in the shared SQLite database
+
+The framework gives every module an isolated classloader and a scoped context.
 
 ---
 
 ## Quick Start
 
-### 1. Project Setup (Maven)
+### 1. Maven setup
 
 ```xml
 <dependencies>
@@ -38,7 +42,7 @@ extracted and served as a sub-page in the main IntegrityPolygon web panel.
 </dependencies>
 ```
 
-### 2. Module Descriptor (`src/main/resources/module.json`)
+### 2. Module descriptor (`src/main/resources/module.json`)
 
 ```json
 {
@@ -52,42 +56,28 @@ extracted and served as a sub-page in the main IntegrityPolygon web panel.
 }
 ```
 
-| Field         | Required | Description                                                      |
-|---------------|----------|------------------------------------------------------------------|
-| `id`          | ✅       | Unique identifier (lowercase, hyphenated). Used in API paths.    |
-| `name`        | ✅       | Human-readable name shown in the dashboard.                      |
-| `version`     | ✅       | Semantic version string.                                         |
-| `description` | No       | Brief description shown in the module list.                      |
-| `author`      | No       | Author name.                                                     |
-| `main`        | ✅       | Fully-qualified class name implementing `Module`.                |
-| `dashboard`   | No       | Path inside the JAR containing dashboard HTML files (e.g. `web/`)|
+### 3. Module entrypoint
 
-### 3. Implement the Module Interface
-
-> **Important:** Since Java 9+ has `java.lang.Module`, you must use the fully-qualified
-> name when implementing the interface.
+> Use `dev.erikradovan.integritypolygon.api.Module` (fully-qualified) to avoid collision with `java.lang.Module`.
 
 ```java
 package com.example.mymodule;
 
-import dev.erikradovan.integritypolygon.api.*;
+import dev.erikradovan.integritypolygon.api.ModuleContext;
 
 public class MyModule implements dev.erikradovan.integritypolygon.api.Module {
 
     @Override
     public void onEnable(ModuleContext ctx) {
-        // Called when the module is loaded
-        ctx.getLogger().info("MyModule enabled!");
+        ctx.getLogger().info("MyModule enabled");
     }
 
     @Override
     public void onDisable() {
-        // Called when the module is unloaded
     }
 
     @Override
     public void onReload() {
-        // Called when the user triggers a config reload
     }
 }
 ```
@@ -98,225 +88,178 @@ public class MyModule implements dev.erikradovan.integritypolygon.api.Module {
 
 ### ModuleContext
 
-The `ModuleContext` is passed to your module's `onEnable()` method. It provides access to
-all framework services.
+`ModuleContext` is module-scoped and passed to `onEnable`.
 
-| Method                  | Returns            | Description                                    |
-|-------------------------|--------------------|-------------------------------------------------|
-| `getDescriptor()`      | `ModuleDescriptor` | Module metadata from module.json                |
-| `getLogger()`          | `Logger`           | SLF4J logger scoped to this module              |
-| `getProxyServer()`     | `ProxyServer`      | Velocity proxy server instance                  |
-| `getServiceRegistry()` | `ServiceRegistry`  | Shared service registry                         |
-| `getEventManager()`    | `EventManager`     | Subscribe to Velocity events                    |
-| `getTaskScheduler()`   | `TaskScheduler`    | Schedule tasks (periodic, delayed)              |
-| `getMessagingService()`| `MessagingService` | Send messages to backend servers                |
-| `getDashboard()`       | `ModuleDashboard`  | Register REST endpoints and push dashboard data |
+| Method | Description |
+|---|---|
+| `getDescriptor()` | Metadata from `module.json` |
+| `getLogger()` | SLF4J logger scoped to this module |
+| `getServiceRegistry()` | Shared cross-module service lookup |
+| `getEventManager()` | Module-scoped event subscription manager |
+| `getTaskScheduler()` | Module-scoped task scheduler |
+| `getDashboard()` | Module dashboard route registration + pushes |
+| `getDataDirectory()` | Module data directory path (optional direct file use) |
+| `getStorage()` | SQLite-backed module data API (table creation + SQL execution) |
+| `getConfigStore()` | Typed centralized module config API |
 
 ### ServiceRegistry
 
-Access shared framework services:
+Framework services (example):
 
 ```java
-ServiceRegistry reg = ctx.getServiceRegistry();
+var reg = ctx.getServiceRegistry();
 
-ConfigManager config   = reg.get(ConfigManager.class).orElse(null);
-LogManager logs        = reg.get(LogManager.class).orElse(null);
-ExtenderService extend = reg.get(ExtenderService.class).orElse(null);
+var logs = reg.get(dev.erikradovan.integritypolygon.logging.LogManager.class).orElse(null);
+var ext = reg.get(dev.erikradovan.integritypolygon.api.ExtenderService.class).orElse(null);
 ```
+
+---
+
+## SQLite Storage API
+
+All module data is stored in the shared core SQLite database.
+
+### ModuleStorage
+
+`ModuleStorage` is module-scoped.
+
+```java
+var storage = ctx.getStorage();
+
+String table = storage.qualifyTable("detections");
+storage.ensureTable("detections", "(id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT NOT NULL, created_at INTEGER NOT NULL)");
+
+storage.update("INSERT INTO " + table + " (ip, created_at) VALUES (?, ?)", ip, System.currentTimeMillis());
+
+storage.query("SELECT ip, created_at FROM " + table + " ORDER BY id DESC LIMIT ?", rs -> {
+    while (rs.next()) {
+        String foundIp = rs.getString("ip");
+        long ts = rs.getLong("created_at");
+    }
+}, 20);
+```
+
+Rules:
+
+- table names are auto-namespaced as `{moduleId}__{table}`
+- module IDs and table names are validated to `[a-z0-9-]` and `[a-z0-9_]`
+- use prepared parameters (`?`) for user input
+
+---
+
+## Centralized Config API
+
+Each module registers typed options in the central SQLite config tables.
+
+### Register schema + defaults
+
+```java
+var config = ctx.getConfigStore();
+
+config.registerOptions(java.util.List.of(
+    dev.erikradovan.integritypolygon.api.ModuleConfigOption.bool("enabled", true, false, "Enable this module"),
+    dev.erikradovan.integritypolygon.api.ModuleConfigOption.integer("max_conn_per_ip", 3, false, "Per-IP join cap"),
+    dev.erikradovan.integritypolygon.api.ModuleConfigOption.string("kick_message", "Connection denied.", false, "Kick message"),
+    dev.erikradovan.integritypolygon.api.ModuleConfigOption.list("whitelisted_ips", java.util.List.of(), false, "Bypass list")
+));
+
+boolean enabled = config.getBoolean("enabled", true);
+int cap = config.getInt("max_conn_per_ip", 3);
+String msg = config.getString("kick_message", "Connection denied.");
+java.util.List<String> ips = config.getStringList("whitelisted_ips");
+```
+
+### Update values
+
+```java
+config.set("enabled", true);
+config.set("max_conn_per_ip", 5);
+config.set("whitelisted_ips", java.util.List.of("127.0.0.1"));
+```
+
+Behavior:
+
+- on register, schema rows are upserted (`type`, nullable, description, defaults)
+- missing values are initialized from defaults
+- values are stored centrally, not per-module YAML files
 
 ---
 
 ## Dashboard API
 
-### Registering REST Endpoints
-
-Each module gets its own namespaced API under `/api/modules/{module-id}/`:
+Register relative routes only:
 
 ```java
-ModuleDashboard dashboard = ctx.getDashboard();
+var dash = ctx.getDashboard();
 
-// GET /api/modules/my-module/status
-dashboard.get("status", reqCtx -> {
-    reqCtx.json(Map.of("online", true, "count", 42));
-});
-
-// POST /api/modules/my-module/config
-dashboard.post("config", reqCtx -> {
-    String body = reqCtx.body();
-    reqCtx.json(Map.of("success", true));
+dash.get("status", req -> req.json(java.util.Map.of("ok", true)));
+dash.post("config", req -> {
+    // /api/modules/{id}/config
+    req.json(java.util.Map.of("success", true));
 });
 ```
 
-### RequestContext Interface
+`context.getDashboard().get("status", ...)` maps to `/api/modules/{id}/status`.
+
+Push realtime updates:
 
 ```java
-interface RequestContext {
-    String body();                                // Request body as string
-    String pathParam(String name);                // URL path parameter
-    String queryParam(String name);               // Query parameter
-    String queryParam(String name, String def);   // With default value
-    String authenticatedUser();                   // JWT subject
-    RequestContext status(int code);              // Set response status
-    void json(Object obj);                        // Send JSON response
-    void result(String text);                     // Send plain text
-}
+dash.pushUpdate("stats_changed", java.util.Map.of("blocked", 42));
 ```
-
-### Pushing Real-Time Updates
-
-```java
-dashboard.pushUpdate("stats_changed", Map.of(
-    "blocked", totalBlocked.get()
-));
-```
-
----
-
-## Configuration
-
-```java
-ConfigManager config = reg.get(ConfigManager.class).orElse(null);
-String moduleId = ctx.getDescriptor().id;
-
-// Read config
-Map<String, Object> cfg = config.getModuleConfig(moduleId);
-
-// Write config
-cfg.put("enabled", true);
-config.saveModuleConfig(moduleId, cfg);
-```
-
-Config is stored as YAML under `plugins/integritypolygon/modules/{id}.yml`.
-
----
-
-## Logging
-
-```java
-LogManager logs = reg.get(LogManager.class).orElse(null);
-logs.log("my-module", "INFO",  "STARTUP",  "Module initialized");
-logs.log("my-module", "WARN",  "SECURITY", "Suspicious connection from 1.2.3.4");
-logs.log("my-module", "ERROR", "API",      "External API call failed");
-```
-
-Logs appear in the dashboard Logs page with filtering by module, level, time range, and text search.
 
 ---
 
 ## Event Handling
 
 ```java
-ctx.getEventManager().subscribe(new MyListener());
-
-public class MyListener {
-    @Subscribe
-    public void onPreLogin(PreLoginEvent event) {
-        String ip = event.getConnection().getRemoteAddress()
-                         .getAddress().getHostAddress();
-        // Block if needed
-        event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
-            Component.text("Blocked!").color(NamedTextColor.RED)
-        ));
+ctx.getEventManager().subscribe(new Object() {
+    @com.velocitypowered.api.event.Subscribe
+    public void onPreLogin(com.velocitypowered.api.event.connection.PreLoginEvent event) {
+        // module logic
     }
-}
-```
-
----
-
-## Dashboard Frontend
-
-Place your dashboard HTML in `src/main/resources/web/index.html`.
-It's served as an iframe. The auth token is passed via query parameter:
-
-```javascript
-const token = new URLSearchParams(location.search).get('token');
-const API = location.origin;
-
-async function api(path, options = {}) {
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-    };
-    const r = await fetch(API + '/api/modules/my-module/' + path,
-                          { ...options, headers });
-    return r.json();
-}
-
-// Load status
-const status = await api('status');
-
-// Save config
-await api('config', {
-    method: 'POST',
-    body: JSON.stringify({ enabled: true })
 });
 ```
 
-### Design Guidelines
+---
 
-- Dark theme: background `#07080f`, cards `#121425`, accent `#22d3a7`
-- Font: Inter
-- Use granular DOM updates (`textContent`) — never re-render forms on polling
-- Poll stats every 5 seconds; load config once on init
+## Frontend Notes
+
+Dashboard files are loaded from `src/main/resources/web/` and served under `/modules/{id}/`.
+
+- pass bearer token in `Authorization: Bearer <token>`
+- call module routes under `/api/modules/{id}/...`
+- keep UI unchanged when moving config to DB; only backend route implementation changes
 
 ---
 
-## Module Lifecycle
+## Lifecycle
 
-```
-JAR placed in modules/ directory
-        │
-  ModuleWatcher detects file → debounce (2s stability)
-        │
-  ModuleManager.loadModule()
-        ├── Parse module.json
-        ├── Create isolated ClassLoader
-        ├── Instantiate main class
-        ├── Create ModuleContext
-        ├── Extract dashboard files
-        └── Register static file handler
-        │
-  Module.onEnable(context) ← your code runs here
-        │
-  Module is RUNNING
-        ├── Module.onReload() on config change
-        │
-  Module.onDisable() on unload/shutdown
-        ├── Cleanup dashboard files
-        ├── Close ClassLoader
-        └── Unregister routes
+```text
+JAR copied into modules/
+ -> ModuleWatcher detects change (2s debounce)
+ -> ModuleManager parses module.json and resolves deps
+ -> ModuleContext created (dashboard, scheduler, storage, config store)
+ -> onEnable called
+ -> onReload called on manual module reload
+ -> onDisable called on unload/shutdown
 ```
 
 ---
-
-## Existing Modules
-
-| Module                  | Description                                                                     |
-|-------------------------|---------------------------------------------------------------------------------|
-| **Anti-Bot**            | Rate limiting, flood detection, bot heuristics, handshake validation            |
-| **Account Protection**  | Staff 2FA (TOTP), session IP locking, enrollment management                    |
-| **Identity Enforcement**| VPN/proxy detection via proxycheck.io with subnet-level caching                |
-| **Geo-Filtering**       | Country-based blacklist/whitelist using geojs.io geolocation                   |
-| **Server Monitor**      | Real-time backend performance profiling — TPS, chunk tick costs, plugin times, lag spike detection |
-
----
-
 
 ## Build & Deploy
 
-```bash
+```cmd
 mvn clean package -DskipTests
-cp target/my-module-1.0.0.jar /path/to/velocity/plugins/IntegrityPolygon/modules/
-# ModuleWatcher auto-detects and hot-loads the JAR
 ```
+
+Copy resulting module JAR into the proxy plugin modules directory, then ModuleWatcher hot-loads it.
 
 ---
 
-## Best Practices
+## Practical Guidance
 
-1. **Fail-open on API errors** — Allow the player if an external API fails.
-2. **Cache aggressively** — Cache by IP and /24 subnet with configurable TTL.
-3. **Use the logging API** — Log through `LogManager` so events appear in the dashboard.
-4. **Granular dashboard updates** — Only update changed DOM values on polling.
-5. **Handle concurrency** — Use `ConcurrentHashMap`, `AtomicLong`, `volatile`.
-6. **Avoid `Map.of()` with >10 entries** — Use `LinkedHashMap` for large maps (Java limit).
+1. Put user-configurable settings in `ModuleConfigStore`, not ad-hoc files.
+2. Use `ModuleStorage` for structured/stateful data (history, registries, counters).
+3. Keep dashboard routes relative (`"status"`, not `"/status"`).
+4. Use `LogManager` for dashboard-visible logs.
+5. Keep external API failures fail-open where security model allows.
