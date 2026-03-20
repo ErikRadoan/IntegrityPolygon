@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 
 /**
  * WebSocket handler for real-time log streaming and status updates.
- * Clients connect at {@code /ws/live?token=<JWT>} and receive push notifications
+ * Clients connect at {@code /ws/live} and receive push notifications
  * for new log events and module state changes.
  */
 public class RealtimeHandler implements Consumer<WsConfig> {
@@ -47,8 +47,8 @@ public class RealtimeHandler implements Consumer<WsConfig> {
     @Override
     public void accept(WsConfig ws) {
         ws.onConnect(ctx -> {
-            String token = ctx.queryParam("token");
-            if (token == null || authManager.validateToken(token).isEmpty()) {
+            String sessionId = extractSessionId(ctx);
+            if (sessionId == null || authManager.validateSession(sessionId).isEmpty()) {
                 ctx.closeSession(4001, "Unauthorized");
                 return;
             }
@@ -68,6 +68,22 @@ public class RealtimeHandler implements Consumer<WsConfig> {
                 logger.debug("WebSocket error: {}", ctx.error().getMessage());
             }
         });
+    }
+
+    private String extractSessionId(WsContext ctx) {
+        String cookieHeader = ctx.header("Cookie");
+        if (cookieHeader != null) {
+            for (String entry : cookieHeader.split(";")) {
+                String part = entry.trim();
+                if (part.startsWith("ip_auth=")) {
+                    String value = part.substring("ip_auth=".length());
+                    if (!value.isBlank()) {
+                        return value;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private void broadcastLogEvent(LogEvent event) {

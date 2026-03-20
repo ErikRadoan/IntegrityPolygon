@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.erikradovan.integritypolygon.api.AlertService;
 import dev.erikradovan.integritypolygon.api.ExtenderMessage;
 import dev.erikradovan.integritypolygon.api.ExtenderService;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
@@ -44,7 +43,6 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     private ModuleContext context;
     private ExtenderService extenderService;
     private ConfigManager configManager;
-    private AlertService alertService;
     private LogManager logManager;
     private ProxyServer proxyServer;
 
@@ -69,7 +67,6 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.extenderService = reg.get(ExtenderService.class).orElse(null);
         this.configManager = reg.get(ConfigManager.class).orElse(null);
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
         this.proxyServer = reg.get(ProxyServer.class).orElse(null);
 
@@ -148,7 +145,7 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     private void handleHeartbeat(ExtenderMessage msg) {
         String server = msg.source();
         ServerState state = serverStates.computeIfAbsent(server, ServerState::new);
-        state.serverLabel = msg.serverLabel();
+        state.serverLabel = extractServerName(msg);
         state.lastHeartbeat = System.currentTimeMillis();
     }
 
@@ -160,7 +157,7 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         }
 
         ServerState state = serverStates.computeIfAbsent(server, ServerState::new);
-        state.serverLabel = msg.serverLabel();
+        state.serverLabel = extractServerName(msg);
         state.lastReport = System.currentTimeMillis();
 
         JsonObject report = JsonParser.parseString(reportRaw).getAsJsonObject();
@@ -230,8 +227,10 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         }
 
         for (Map.Entry<String, Map<String, Object>> entry : extenderService.getServerStates().entrySet()) {
-            Object label = entry.getValue().get("server");
-            if (serverLabel.equals(String.valueOf(label))) {
+            Map<String, Object> state = entry.getValue();
+            Object label = state.get("server");
+            Object name = state.get("name");
+            if (serverLabel.equals(String.valueOf(label)) || serverLabel.equals(String.valueOf(name))) {
                 return entry.getKey();
             }
         }
@@ -239,7 +238,7 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
     }
 
     private void handleMitigationResult(ExtenderMessage msg) {
-        String server = msg.serverLabel();
+        String server = extractServerName(msg);
         String world = msg.getString("world");
         if (world == null || world.isBlank()) {
             world = "world";
@@ -249,9 +248,6 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         int removed = msg.getInt("removed_entities", 0);
         String text = "Mitigated chunk " + world + " [" + x + ", " + z + "] on " + server + " (removed entities=" + removed + ")";
         log("WARN", "MITIGATION", text);
-        if (alertService != null) {
-            alertService.sendAlert(AlertService.Severity.WARNING, "Spike mitigation", text);
-        }
     }
 
     private synchronized void addIncident(SpikeIncident incident) {
@@ -322,7 +318,8 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         synchronized (this) {
             for (SpikeIncident incident : incidentHistory) {
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("server", incident.server());
+                ServerState state = serverStates.get(incident.server());
+                row.put("server", state != null ? resolveDisplayName(state) : incident.server());
                 row.put("severity", incident.severity());
                 row.put("timestamp", incident.timestamp().toString());
                 row.put("chunk", incident.snapshot());
@@ -422,6 +419,13 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
         if (extenderService != null) {
             Map<String, Object> ext = extenderService.getServerStates().get(state.id);
             if (ext != null) {
+                Object explicitName = ext.get("name");
+                if (explicitName != null) {
+                    String n = String.valueOf(explicitName).trim();
+                    if (!n.isBlank()) {
+                        return n;
+                    }
+                }
                 String resolved = resolveProxyServerName(ext);
                 if (resolved != null) {
                     return resolved;
@@ -432,6 +436,38 @@ public class SpikeDetectorModule implements dev.erikradovan.integritypolygon.api
             return state.serverLabel;
         }
         return state.id.length() > 12 ? state.id.substring(0, 12) : state.id;
+    }
+
+    private String extractServerName(ExtenderMessage msg) {
+        if (msg == null) {
+            return "unknown";
+        }
+        JsonObject payload = msg.payload();
+        if (payload != null) {
+            if (payload.has("server")) {
+                try {
+                    String explicit = payload.get("server").getAsString();
+                    if (explicit != null && !explicit.isBlank()) {
+                        return explicit;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            if (payload.has("name")) {
+                try {
+                    String explicit = payload.get("name").getAsString();
+                    if (explicit != null && !explicit.isBlank()) {
+                        return explicit;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        String label = msg.serverLabel();
+        if (label != null && !label.isBlank()) {
+            return label;
+        }
+        return msg.source();
     }
 
     private String resolveProxyServerName(Map<String, Object> extState) {

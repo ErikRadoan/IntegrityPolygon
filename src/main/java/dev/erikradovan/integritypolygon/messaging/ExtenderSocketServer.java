@@ -88,7 +88,6 @@ public class ExtenderSocketServer {
         executor.submit(() -> {
             try {
                 serverSocket = new ServerSocket(port);
-                logger.info("Extender socket listening on port {}", port);
                 while (running) {
                     try {
                         Socket client = serverSocket.accept();

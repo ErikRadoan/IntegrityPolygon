@@ -88,19 +88,18 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme',t);
 }
 
-const token=new URLSearchParams(location.search).get('token');
 const API=location.origin+'/api/modules/spike-detector/';
 let state={status:{},servers:[],config:{},nameByExtenderId:{}};
 
 async function api(path,opt={}){
-  const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}});
+  const r=await fetch(API+path,{...opt,headers:{'Content-Type':'application/json'},credentials:'same-origin'});
   const d=await r.json().catch(()=>({}));
   if(!r.ok) throw d;
   return d;
 }
 
 async function rootApi(path,opt={}){
-  const r=await fetch(location.origin+path,{...opt,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}});
+  const r=await fetch(location.origin+path,{...opt,headers:{'Content-Type':'application/json'},credentials:'same-origin'});
   const d=await r.json().catch(()=>({}));
   if(!r.ok) throw d;
   return d;

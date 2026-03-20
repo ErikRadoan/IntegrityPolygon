@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.erikradovan.integritypolygon.api.AlertService;
 import dev.erikradovan.integritypolygon.api.ExtenderMessage;
 import dev.erikradovan.integritypolygon.api.ExtenderService;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
@@ -17,6 +16,10 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.*;
@@ -49,7 +52,6 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private ExtenderService extenderService;
     private ConfigManager configManager;
     private LogManager logManager;
-    private AlertService alertService;
 
     // Per-server profiling state
     private final ConcurrentHashMap<String, ServerProfile> serverProfiles = new ConcurrentHashMap<>();
@@ -58,9 +60,15 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private volatile int reportIntervalSec = 10;
     private volatile int sampleIntervalMs = 1;
     private volatile boolean enabled = true;
+    private volatile int historyMaxPoints = 180;
 
     private volatile byte[] bundledExtenderJar;
     private final Set<String> extendedExtenders = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<String, Deque<MetricSample>> historyByServer = new ConcurrentHashMap<>();
+    private static final int MAX_HISTORY_POINTS_CAP = 2000;
+    private static final long HISTORY_FLUSH_INTERVAL_SEC = 15;
+    private volatile Path historyDbFile;
+    private volatile boolean historyDirty;
 
     @Override
     public void onEnable(ModuleContext ctx) {
@@ -69,10 +77,12 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.extenderService = reg.get(ExtenderService.class).orElse(null);
         this.configManager = reg.get(ConfigManager.class).orElse(null);
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
 
         loadConfig();
+        historyDbFile = ctx.getDataDirectory().resolve("history-db.json");
+        loadHistoryDatabase();
+        ctx.getTaskScheduler().scheduleAtFixedRate(this::flushHistoryIfDirty, HISTORY_FLUSH_INTERVAL_SEC, HISTORY_FLUSH_INTERVAL_SEC, TimeUnit.SECONDS);
 
         // Load bundled extender JAR for on-demand per-server deployment.
         bundledExtenderJar = loadBundledExtenderJar();
@@ -95,19 +105,17 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
 
     @Override
     public void onDisable() {
+        flushHistoryDatabase();
         if (extenderService != null) {
             extenderService.removeAllHandlers("profiler");
-            for (String extenderId : new ArrayList<>(extendedExtenders)) {
-                sendUndeployToExtender(extenderId);
-            }
         }
-        extendedExtenders.clear();
         log("INFO", "LIFECYCLE", "Profiler disabled");
     }
 
     @Override
     public void onReload() {
         loadConfig();
+        trimAllHistoryToRetention();
         // Push updated config to extenders
         sendConfigToExtenders();
         log("INFO", "LIFECYCLE", "Profiler configuration reloaded");
@@ -163,6 +171,19 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         enabled = boolCfg(cfg, "enabled", true);
         reportIntervalSec = intCfg(cfg, "report_interval_sec", 10);
         sampleIntervalMs = intCfg(cfg, "sample_interval_ms", 1);
+        historyMaxPoints = Math.max(20, Math.min(intCfg(cfg, "history_max_points", 180), MAX_HISTORY_POINTS_CAP));
+        extendedExtenders.clear();
+        Object deployed = cfg.get("deployed_extenders");
+        if (deployed instanceof List<?> list) {
+            for (Object entry : list) {
+                if (entry != null) {
+                    String extenderId = String.valueOf(entry).trim();
+                    if (!extenderId.isBlank()) {
+                        extendedExtenders.add(extenderId);
+                    }
+                }
+            }
+        }
     }
 
     private void saveDefaultConfig() {
@@ -170,11 +191,15 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         cfg.put("enabled", true);
         cfg.put("report_interval_sec", 10);
         cfg.put("sample_interval_ms", 1);
+        cfg.put("history_max_points", 180);
+        cfg.put("deployed_extenders", new ArrayList<String>());
         configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
     }
 
     private void handleProfilerReady(ExtenderMessage msg) {
-        extendedExtenders.add(msg.source());
+        if (extendedExtenders.add(msg.source())) {
+            saveDeploymentState();
+        }
         log("INFO", "EXTENDER", "Profiler extender ready on " + extractServerName(msg));
         sendConfigToExtender(msg.source());
     }
@@ -189,7 +214,9 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         payload.addProperty("version", context.getDescriptor().version());
         payload.addProperty("deploy_path", "utility-classes/server-monitor");
         extenderService.sendMessage("system", extenderId, "deploy_module", payload);
-        extendedExtenders.add(extenderId);
+        if (extendedExtenders.add(extenderId)) {
+            saveDeploymentState();
+        }
     }
 
     private void sendUndeployToExtender(String extenderId) {
@@ -198,11 +225,17 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         payload.addProperty("module_id", "profiler");
         payload.addProperty("deploy_path", "utility-classes/server-monitor");
         extenderService.sendMessage("system", extenderId, "undeploy_module", payload);
+        if (extendedExtenders.remove(extenderId)) {
+            saveDeploymentState();
+        }
     }
 
     // ── Incoming Data Handlers ──────────────────────────────────
 
     private void handleProfilingData(ExtenderMessage msg) {
+        if (extendedExtenders.add(msg.source())) {
+            saveDeploymentState();
+        }
         String server = extractServerName(msg);
         logger.debug("Received profiling_data from {} ({})", server, msg.source());
         ServerProfile profile = serverProfiles.computeIfAbsent(server, k -> new ServerProfile(server));
@@ -300,12 +333,19 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
             profile.lastUpdate = System.currentTimeMillis();
             profile.totalSamples = data.has("total_samples") ? data.get("total_samples").getAsLong() : 0;
 
+            double cpuSample = profile.processCpu > 0 ? profile.processCpu : profile.systemCpu;
+            if (!Double.isFinite(cpuSample) || cpuSample < 0) cpuSample = 0;
+            appendHistorySample(server, profile.lastUpdate, profile.tps10s, cpuSample);
+
         } catch (Exception e) {
             logger.debug("Error processing profiling data from {}: {}", server, e.getMessage());
         }
     }
 
     private void handleFlameData(ExtenderMessage msg) {
+        if (extendedExtenders.add(msg.source())) {
+            saveDeploymentState();
+        }
         String server = extractServerName(msg);
         ServerProfile profile = serverProfiles.computeIfAbsent(server, k -> new ServerProfile(server));
         profile.extenderId = msg.source();
@@ -328,6 +368,7 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         d.get("config", this::apiGetConfig);
         d.post("config", this::apiSaveConfig);
         d.post("extend/{name}", this::apiExtendServer);
+        d.post("unextend/{name}", this::apiUnextendServer);
     }
 
     private void apiStatus(RequestContext ctx) {
@@ -358,6 +399,7 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
             int serverPort = intFrom(state.getOrDefault("server_port", 0));
 
             Map<String, Object> row = new LinkedHashMap<>();
+            boolean hasHistory = historyByServer.containsKey(server);
             row.put("name", server);
             row.put("server", server);
             row.put("state_server", stateServer);
@@ -365,8 +407,8 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
             row.put("server_ip", serverIp);
             row.put("server_port", serverPort);
             row.put("identifier", buildIdentifier(extenderId, serverIp, serverPort));
-            row.put("extended", extendedExtenders.contains(extenderId));
-            row.put("has_data", profile != null);
+            row.put("extended", extendedExtenders.contains(extenderId) || profile != null);
+            row.put("has_data", profile != null || hasHistory);
             row.put("last_heartbeat", state.getOrDefault("last_heartbeat", 0L));
             row.put("players", state.getOrDefault("players", 0));
             row.put("tps", state.getOrDefault("tps", 0.0));
@@ -403,7 +445,13 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     private void apiServerDetail(RequestContext ctx) {
         String name = ctx.pathParam("name");
         ServerProfile p = serverProfiles.get(name);
-        if (p == null) { ctx.status(404).json(Map.of("error", "Server not found")); return; }
+        if (p == null && !historyByServer.containsKey(name)) {
+            ctx.status(404).json(Map.of("error", "Server not found"));
+            return;
+        }
+        if (p == null) {
+            p = new ServerProfile(name);
+        }
 
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("name", p.server);
@@ -434,6 +482,7 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         detail.put("sample_interval_ms", p.sampleIntervalMs);
         detail.put("report_interval_sec", p.reportIntervalSec);
         detail.put("last_update", p.lastUpdate);
+        detail.put("history", historySnapshotForServer(name));
         ctx.json(detail);
     }
 
@@ -454,6 +503,33 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         sendDeployToExtender(extenderId);
         sendConfigToExtender(extenderId);
         ctx.json(Map.of("success", true, "message", "Profiler extension requested", "extender", extenderId));
+    }
+
+    private void apiUnextendServer(RequestContext ctx) {
+        String name = ctx.pathParam("name");
+        if (extenderService == null) { ctx.status(500).json(Map.of("error", "No extender service")); return; }
+
+        String extenderId = findExtenderIdByServer(name);
+        if (extenderId == null) {
+            ctx.status(404).json(Map.of("error", "No extender found for server " + name));
+            return;
+        }
+
+        sendUndeployToExtender(extenderId);
+        ctx.json(Map.of("success", true, "message", "Profiler extension removed", "extender", extenderId));
+    }
+
+    private void saveDeploymentState() {
+        if (configManager == null || context == null) return;
+        try {
+            Map<String, Object> cfg = configManager.getModuleConfig(context.getDescriptor().id());
+            List<String> deployed = new ArrayList<>(extendedExtenders);
+            deployed.sort(String::compareToIgnoreCase);
+            cfg.put("deployed_extenders", deployed);
+            configManager.saveModuleConfig(context.getDescriptor().id(), cfg);
+        } catch (Exception e) {
+            logger.debug("Failed to persist profiler deployment state: {}", e.getMessage());
+        }
     }
 
     private String findExtenderIdByServer(String serverIdentifier) {
@@ -521,6 +597,7 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         c.put("enabled", enabled);
         c.put("report_interval_sec", reportIntervalSec);
         c.put("sample_interval_ms", sampleIntervalMs);
+        c.put("history_max_points", historyMaxPoints);
         ctx.json(c);
     }
 
@@ -569,6 +646,18 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
         volatile long lastFlameGraphUpdate;
 
         ServerProfile(String server) { this.server = server; }
+    }
+
+    static class MetricSample {
+        final long ts;
+        final double tps;
+        final double cpu;
+
+        MetricSample(long ts, double tps, double cpu) {
+            this.ts = ts;
+            this.tps = tps;
+            this.cpu = cpu;
+        }
     }
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -667,6 +756,158 @@ public class ProfilerModule implements dev.erikradovan.integritypolygon.api.Modu
     }
 
     private double round(double v) { return Math.round(v * 100.0) / 100.0; }
+
+    private void appendHistorySample(String server, long ts, double tps, double cpu) {
+        if (server == null || server.isBlank()) return;
+        final long normalizedTs = ts > 0 ? ts : System.currentTimeMillis();
+        final double normalizedTps = Double.isFinite(tps) ? Math.max(0, tps) : 0;
+        final double normalizedCpu = Double.isFinite(cpu) ? Math.max(0, cpu) : 0;
+
+        Deque<MetricSample> history = historyByServer.computeIfAbsent(server, ignored -> new ArrayDeque<>());
+        synchronized (history) {
+            history.addLast(new MetricSample(normalizedTs, normalizedTps, normalizedCpu));
+            while (history.size() > historyMaxPoints) {
+                history.removeFirst();
+            }
+        }
+        historyDirty = true;
+    }
+
+    private Map<String, Object> historySnapshotForServer(String server) {
+        Deque<MetricSample> history = historyByServer.get(server);
+        if (history == null) {
+            return Map.of("timestamps", List.of(), "tps", List.of(), "cpu", List.of());
+        }
+
+        List<Long> timestamps = new ArrayList<>();
+        List<Double> tps = new ArrayList<>();
+        List<Double> cpu = new ArrayList<>();
+
+        synchronized (history) {
+            for (MetricSample sample : history) {
+                timestamps.add(sample.ts);
+                tps.add(round(sample.tps));
+                cpu.add(round(sample.cpu));
+            }
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("timestamps", timestamps);
+        out.put("tps", tps);
+        out.put("cpu", cpu);
+        return out;
+    }
+
+    private void trimAllHistoryToRetention() {
+        for (Deque<MetricSample> history : historyByServer.values()) {
+            synchronized (history) {
+                while (history.size() > historyMaxPoints) {
+                    history.removeFirst();
+                    historyDirty = true;
+                }
+            }
+        }
+    }
+
+    private void flushHistoryIfDirty() {
+        if (!historyDirty) return;
+        flushHistoryDatabase();
+    }
+
+    private void loadHistoryDatabase() {
+        if (historyDbFile == null) return;
+        try {
+            Path parent = historyDbFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            if (!Files.exists(historyDbFile)) {
+                return;
+            }
+
+            String raw = Files.readString(historyDbFile);
+            if (raw == null || raw.isBlank()) {
+                return;
+            }
+            JsonObject root = gson.fromJson(raw, JsonObject.class);
+            if (root == null || !root.has("servers") || !root.get("servers").isJsonObject()) {
+                return;
+            }
+
+            JsonObject servers = root.getAsJsonObject("servers");
+            for (String server : servers.keySet()) {
+                JsonElement el = servers.get(server);
+                if (!el.isJsonArray()) continue;
+
+                Deque<MetricSample> history = new ArrayDeque<>();
+                JsonArray arr = el.getAsJsonArray();
+                for (JsonElement sampleEl : arr) {
+                    if (!sampleEl.isJsonObject()) continue;
+                    JsonObject s = sampleEl.getAsJsonObject();
+                    long ts = s.has("ts") ? s.get("ts").getAsLong() : 0L;
+                    double tps = s.has("tps") ? s.get("tps").getAsDouble() : 0D;
+                    double cpu = s.has("cpu") ? s.get("cpu").getAsDouble() : 0D;
+                    history.addLast(new MetricSample(ts, tps, cpu));
+                    while (history.size() > historyMaxPoints) {
+                        history.removeFirst();
+                    }
+                }
+                if (!history.isEmpty()) {
+                    historyByServer.put(server, history);
+                }
+            }
+            historyDirty = false;
+        } catch (Exception e) {
+            logger.warn("Failed to load profiler history database: {}", e.getMessage());
+        }
+    }
+
+    private void flushHistoryDatabase() {
+        if (historyDbFile == null) return;
+        try {
+            Path parent = historyDbFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            JsonObject root = new JsonObject();
+            root.addProperty("generated_at", Instant.now().toEpochMilli());
+            root.addProperty("history_max_points", historyMaxPoints);
+
+            JsonObject servers = new JsonObject();
+            List<String> names = new ArrayList<>(historyByServer.keySet());
+            names.sort(String::compareToIgnoreCase);
+            for (String server : names) {
+                Deque<MetricSample> history = historyByServer.get(server);
+                if (history == null) continue;
+
+                JsonArray points = new JsonArray();
+                synchronized (history) {
+                    for (MetricSample sample : history) {
+                        JsonObject row = new JsonObject();
+                        row.addProperty("ts", sample.ts);
+                        row.addProperty("tps", round(sample.tps));
+                        row.addProperty("cpu", round(sample.cpu));
+                        points.add(row);
+                    }
+                }
+                servers.add(server, points);
+            }
+            root.add("servers", servers);
+
+            Path temp = historyDbFile.resolveSibling(historyDbFile.getFileName() + ".tmp");
+            Files.writeString(temp, gson.toJson(root), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+            try {
+                Files.move(temp, historyDbFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException ignored) {
+                Files.move(temp, historyDbFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+            historyDirty = false;
+        } catch (Exception e) {
+            logger.warn("Failed to flush profiler history database: {}", e.getMessage());
+        }
+    }
+
     private boolean boolCfg(Map<String, Object> m, String k, boolean d) {
         Object v = m.get(k); return v instanceof Boolean b ? b : d;
     }

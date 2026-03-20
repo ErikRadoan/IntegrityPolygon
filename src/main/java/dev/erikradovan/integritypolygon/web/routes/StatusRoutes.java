@@ -63,8 +63,11 @@ public class StatusRoutes {
                     Map<String, Object> serverInfo = new LinkedHashMap<>();
                     String name = server.getServerInfo().getName();
                     InetSocketAddress addr = server.getServerInfo().getAddress();
+
+                    String cleanAddress = addr.toString().replace("<unresolved>", name);
+
                     serverInfo.put("name", name);
-                    serverInfo.put("address", addr.toString());
+                    serverInfo.put("address", cleanAddress);
                     serverInfo.put("players", server.getPlayersConnected().size());
 
                     ExtenderMatch match = findBestExtenderMatch(addr, extenderStates, assignedExtenders);

@@ -76,14 +76,6 @@
                                     <pattern>kotlin</pattern>
                                     <shadedPattern>dev.erikradovan.integritypolygon.libs.kotlin</shadedPattern>
                                 </relocation>
-                                <relocation>
-                                    <pattern>com.auth0.jwt</pattern>
-                                    <shadedPattern>dev.erikradovan.integritypolygon.libs.jwt</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>io.prometheus</pattern>
-                                    <shadedPattern>dev.erikradovan.integritypolygon.libs.prometheus</shadedPattern>
-                                </relocation>
                             </relocations>
                             <filters>
                                 <filter>
@@ -155,13 +147,6 @@
             <version>${javalin.version}</version>
         </dependency>
 
-        <!-- JWT authentication -->
-        <dependency>
-            <groupId>com.auth0</groupId>
-            <artifactId>java-jwt</artifactId>
-            <version>4.4.0</version>
-        </dependency>
-
         <!-- JSON (provided by Velocity) -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -178,16 +163,5 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Prometheus metrics exposition -->
-        <dependency>
-            <groupId>io.prometheus</groupId>
-            <artifactId>simpleclient</artifactId>
-            <version>0.16.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.prometheus</groupId>
-            <artifactId>simpleclient_common</artifactId>
-            <version>0.16.0</version>
-        </dependency>
     </dependencies>
 </project>

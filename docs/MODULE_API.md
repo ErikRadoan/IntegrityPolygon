@@ -121,7 +121,6 @@ ServiceRegistry reg = ctx.getServiceRegistry();
 
 ConfigManager config   = reg.get(ConfigManager.class).orElse(null);
 LogManager logs        = reg.get(LogManager.class).orElse(null);
-AlertService alerts    = reg.get(AlertService.class).orElse(null);
 ExtenderService extend = reg.get(ExtenderService.class).orElse(null);
 ```
 
@@ -302,47 +301,6 @@ JAR placed in modules/ directory
 
 ---
 
-## Built-in Monitoring
-
-IntegrityPolygon includes a built-in monitoring dashboard (no Grafana or Prometheus required).
-
-### How It Works
-
-- **MetricsCollector** collects proxy and backend server metrics every 10 seconds
-- **MetricsBuffer** stores time-series data in a fixed-size ring buffer (1 hour of data)
-- **MonitoringRoutes** serves the data via REST API for the dashboard to render charts
-- Charts are rendered using lightweight `<canvas>` drawing (zero external dependencies)
-
-### REST API
-
-| Endpoint                     | Description                                          |
-|------------------------------|------------------------------------------------------|
-| `GET /api/monitoring/series` | Time-series data for charts (optional `?names=...`)  |
-| `GET /api/monitoring/latest` | Latest value for all tracked metrics                 |
-| `GET /api/monitoring/logs`   | Log events with filtering (`?module=&level=&search=`)|
-
-### Prometheus Integration (Optional)
-
-Power users can still scrape `GET /metrics` (Prometheus exposition format) on the same
-web panel port. No extra ports or services needed — just point your Prometheus scraper at
-`http://<server-ip>:<panel-port>/metrics`.
-
-### Publishing Module Metrics
-
-Modules can publish their own metrics via the `MetricsService`:
-
-```java
-MetricsService metrics = context.getServiceRegistry()
-    .get(MetricsService.class).orElse(null);
-if (metrics != null) {
-    metrics.counterInc("ip_module_blocked_total", "Blocked connections",
-        new String[]{"module"}, new String[]{"my-module"});
-    metrics.gaugeSet("ip_module_cache_size", "Cache size",
-        new String[]{"module"}, new String[]{"my-module"}, cacheMap.size());
-}
-```
-
----
 
 ## Build & Deploy
 

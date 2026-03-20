@@ -3,402 +3,1239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profiler - IntegrityPolygon</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>Profiler — IntegrityPolygon</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root{--bg:#0b1220;--surface:#111a2f;--card:#16213b;--border:#24314d;--border-hl:#3a4d74;--text:#e5ecff;--dim:#9ba9c7;--muted:#6f7d98;--accent:#4f7cff;--accent-dim:rgba(79,124,255,.16);--blue:#3fb0ff;--green:#26c281;--amber:#f3a83b;--red:#ef5b67;--r:6px;--font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',Consolas,monospace}
-        [data-theme="midnight"]{--bg:#0f1016;--surface:#171922;--card:#1d2130;--border:#2a3044;--border-hl:#3b4560;--text:#e7e9f5;--dim:#a8afc9;--muted:#7c86a3;--accent:#7d8bff;--accent-dim:rgba(125,139,255,.16);--blue:#58a2ff}
-        [data-theme="nord"]{--bg:#2e3440;--surface:#3b4252;--card:#434c5e;--border:#5b6477;--border-hl:#7b869f;--text:#eceff4;--dim:#d0d7e4;--muted:#a1aec6;--accent:#88c0d0;--accent-dim:rgba(136,192,208,.18);--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
-        [data-theme="emerald"]{--bg:#051612;--surface:#0c201b;--card:#123029;--border:#214b3f;--border-hl:#2f6657;--text:#dbf2e8;--dim:#9ecdb8;--muted:#6da48d;--accent:#34d399;--accent-dim:rgba(52,211,153,.16);--blue:#2dd4bf}
-        [data-theme="light"]{--bg:#f5f7fb;--surface:#ffffff;--card:#f8faff;--border:#dde4f3;--border-hl:#c4d0e8;--text:#1d2433;--dim:#58627a;--muted:#818aa1;--accent:#2f6bff;--accent-dim:rgba(47,107,255,.12);--blue:#2f88ff;--red:#dd4452;--amber:#b97a1c;--green:#12935e}
-        [data-theme="rose"]{--bg:#1a1117;--surface:#241823;--card:#2f1f2d;--border:#4d3350;--border-hl:#654768;--text:#f3e3ee;--dim:#c79cb8;--muted:#9c7890;--accent:#f278a4;--accent-dim:rgba(242,120,164,.18);--blue:#c188ff}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:var(--font),sans-serif;background:transparent;color:var(--text);padding:0;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-        #app{padding:14px}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-        @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-        .fade-in{animation:fadeIn .25s ease both}
-        .slide-up{animation:slideUp .28s ease both}
+        :root {
+            --font:   "IBM Plex Sans", system-ui, sans-serif;
+            --mono:   "IBM Plex Mono", Consolas, monospace;
+            --bg:     #090b10;
+            --surface:#0e1118;
+            --card:   #121722;
+            --input:  #0c1018;
+            --hover:  #181f2e;
+            --active: #1e2738;
+            --border: rgba(80,110,150,.22);
+            --bhl:    rgba(110,150,200,.38);
+            --text:   #d0ecde;
+            --dim:    #5fa882;
+            --muted:  #30604a;
+            --accent: #34d399;
+            --adim:   rgba(52,211,153,.1);
+            --blue:   #2dd4bf;
+            --bdim:   rgba(45,212,191,.1);
+            --red:    #ef4444;
+            --rdim:   rgba(239,68,68,.1);
+            --amber:  #f59e0b;
+            --green:  #34d399;
+            --gdim:   rgba(52,211,153,.12);
+            --r: 3px;
+        }
+        [data-theme="midnight"]{--bg:#0f1016;--surface:#14161f;--card:#1a1e2c;--input:#1e2230;--hover:#242a3a;--active:#2c3348;--border:rgba(110,125,160,.2);--bhl:rgba(140,158,200,.36);--text:#e2e6f5;--dim:#96a0bf;--muted:#667088;--accent:#7d8bff;--adim:rgba(125,139,255,.1);--blue:#58a2ff;--bdim:rgba(88,162,255,.1);--red:#ef5b67;--rdim:rgba(239,91,103,.1);--amber:#f3a83b;--green:#22d3a7;--gdim:rgba(34,211,167,.12)}
+        [data-theme="nord"]{--bg:#2e3440;--surface:#373e4e;--card:#3f4758;--input:#464f62;--hover:#505a6e;--active:#5a6578;--border:rgba(200,210,228,.14);--bhl:rgba(210,220,235,.28);--text:#eceff4;--dim:#cad0de;--muted:#9aa5bc;--accent:#88c0d0;--adim:rgba(136,192,208,.12);--blue:#81a1c1;--bdim:rgba(129,161,193,.12);--red:#bf616a;--rdim:rgba(191,97,106,.12);--amber:#ebcb8b;--green:#a3be8c;--gdim:rgba(163,190,140,.14)}
+        [data-theme="emerald"]{--bg:#051612;--surface:#091e18;--card:#0f2820;--input:#133228;--hover:#193c30;--active:#204838;--border:rgba(60,120,95,.24);--bhl:rgba(90,160,128,.36);--text:#d8f0e6;--dim:#8ec8b0;--muted:#5a9878;--accent:#34d399;--adim:rgba(52,211,153,.12);--blue:#2dd4bf;--bdim:rgba(45,212,191,.12);--red:#f87171;--rdim:rgba(248,113,113,.12);--amber:#fbbf24;--green:#22c55e;--gdim:rgba(34,197,94,.12)}
+        [data-theme="light"]{--bg:#eef0f5;--surface:#f8f9fc;--card:#ffffff;--input:#eceef4;--hover:#e4e7ef;--active:#d8dceb;--border:rgba(0,0,0,.1);--bhl:rgba(0,0,0,.18);--text:#141822;--dim:#4a5068;--muted:#8088a0;--accent:#0d9373;--adim:rgba(13,147,115,.08);--blue:#2563eb;--bdim:rgba(37,99,235,.08);--red:#dc2626;--rdim:rgba(220,38,38,.06);--amber:#d97706;--green:#16a34a;--gdim:rgba(22,163,74,.06)}
+        [data-theme="rose"]{--bg:#120a0d;--surface:#180f14;--card:#1e1419;--input:#241820;--hover:#2c1e28;--active:#342430;--border:rgba(200,50,80,.1);--bhl:rgba(240,80,110,.2);--text:#eedce4;--dim:#a87088;--muted:#684858;--accent:#fb7185;--adim:rgba(251,113,133,.1);--blue:#e879f9;--bdim:rgba(232,121,249,.1);--red:#fb7185;--rdim:rgba(251,113,133,.1);--amber:#f59e0b;--green:#22c55e;--gdim:rgba(34,197,94,.1)}
 
-        .card,.chart-card,.server-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
-        .card{padding:14px 16px;margin-bottom:12px}
-        .card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
-        .card h3 svg{width:14px;height:14px;stroke:var(--dim);fill:none;stroke-width:2}
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: transparent;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        #app { padding: 16px; }
 
-        .server-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px}
-        .server-card{padding:14px;transition:border-color .16s,transform .16s;cursor:pointer}
-        .server-card:hover{border-color:var(--border-hl);transform:translateY(-1px)}
-        .server-card .title{font-size:16px;font-weight:700}
-        .server-card .meta{margin-top:6px;color:var(--dim);font-size:12px}
-        .server-card .badges{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-        .badge{padding:3px 8px;border-radius:999px;border:1px solid var(--border);font-size:11px;color:var(--dim)}
-        .badge.good{border-color:rgba(38,194,129,.5);color:var(--green)}
-        .badge.warn{border-color:rgba(243,168,59,.5);color:var(--amber)}
-        .server-card .actions{display:flex;gap:8px;margin-top:12px}
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .fade-in  { animation: fadeIn  .22s ease both; }
+        .slide-up { animation: slideUp .28s ease both; }
 
-        .btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font),sans-serif;transition:all .14s}
-        .btn:hover{border-color:var(--accent);color:var(--accent)}
-        .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-        .btn.primary:hover{filter:brightness(1.06)}
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted);
+            font-family: var(--mono); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .card-title svg { width: 13px; height: 13px; stroke: var(--muted); fill: none; stroke-width: 2; }
 
-        .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-        .back-arrow{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);cursor:pointer;color:var(--text);font-size:18px;line-height:1}
-        .back-arrow:hover{border-color:var(--accent);color:var(--accent)}
-        .prof-icon{width:34px;height:34px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border-hl);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .prof-icon svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-        .topbar-title{font-size:15px;font-weight:700;letter-spacing:.01em}
+        .no-data {
+            color: var(--muted); padding: 48px 16px;
+            text-align: center; font-family: var(--mono); font-size: 12px;
+        }
 
-        .top-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
-        .group-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-        .group-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin-bottom:10px}
-        .group-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-        .metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
-        .metric-value{font-size:19px;line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
-        .metric-value.good{color:var(--green)}.metric-value.warn{color:var(--amber)}.metric-value.bad{color:var(--red)}.metric-value.hl{color:var(--accent)}
-        .metric-sub{font-size:11px;color:var(--dim);margin-top:1px}
+        /* ── Server Picker ── */
+        .picker-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .picker-title  { font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+        .picker-subtitle { font-size: 10px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: .8px; }
 
-        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-        @media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
-        .chart-card{padding:14px 16px}
-        .chart-card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:8px}
-        .chart-card canvas{width:100%;height:84px;display:block}
+        .server-table { width: 100%; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--border); display: flex; flex-direction: column; gap: 1px; }
+        .server-row-item { background: var(--card); display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 16px; padding: 13px 16px; transition: background .1s; }
+        .server-row-item:hover { background: var(--hover); }
+        .server-row-item.clickable { cursor: pointer; }
+        .srv-name-col .srv-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .srv-name-col .srv-addr  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+        .srv-stats-col { display: flex; gap: 16px; align-items: center; }
+        .srv-stat-item { text-align: center; }
+        .srv-stat-item .sl { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+        .srv-stat-item .sv { font-family: var(--mono); font-size: 13px; font-weight: 700; line-height: 1.2; margin-top: 1px; }
+        .srv-badges-col { display: flex; gap: 5px; align-items: center; }
+        .srv-actions-col { display: flex; gap: 6px; align-items: center; }
 
-        .method-tree{font-family:var(--mono),monospace;font-size:12px}
-        .tree-node{border-left:1px solid var(--border);margin-left:8px;padding-left:10px;margin-top:2px}
-        .tree-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:var(--r);cursor:pointer;transition:background .1s}
-        .tree-row:hover{background:var(--card)}
-        .tree-toggle{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;transition:transform .15s;flex-shrink:0}
-        .tree-toggle.open{transform:rotate(90deg)}
-        .tree-toggle.leaf{visibility:hidden}
-        .tree-bar{width:64px;height:6px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0}
-        .tree-bar-fill{height:100%;transition:width .3s}
-        .tree-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-        .tree-name .pkg{color:var(--muted)}
-        .tree-name .cls{color:var(--blue)}
-        .tree-name .mtd{color:var(--accent)}
-        .tree-pct{font-weight:600;min-width:50px;text-align:right;font-variant-numeric:tabular-nums}
-        .tree-samples{color:var(--muted);min-width:64px;text-align:right;font-size:11px}
-        .tree-children{overflow:hidden;transition:max-height .2s ease}
-        .tree-children.collapsed{max-height:0!important}
+        .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 2px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; font-family: var(--mono); border: 1px solid var(--border); color: var(--muted); }
+        .badge.good { color: var(--green);  border-color: rgba(52,211,153,.25); background: var(--gdim); }
+        .badge.warn { color: var(--amber);  border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.08); }
+        .badge.bad  { color: var(--red);    border-color: rgba(239,68,68,.25);  background: var(--rdim); }
+        .badge.info { color: var(--blue);   border-color: rgba(45,212,191,.25); background: var(--bdim); }
+        .badge.dead { color: var(--muted);  border-color: var(--border); }
 
-        table{width:100%;border-collapse:collapse;font-size:12px}
-        th{text-align:left;font-weight:600;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.7px;padding:8px 10px;border-bottom:1px solid var(--border)}
-        td{padding:8px 10px;border-bottom:1px solid var(--border)}
-        .filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-        .filters input{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:var(--font),sans-serif;min-width:200px}
-        .collapse-all-btn{font-size:11px;color:var(--dim);cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:var(--font),sans-serif}
-        .no-data{color:var(--muted);padding:40px;text-align:center;font-size:13px}
+        .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 10px; font-weight: 700; border-radius: var(--r); border: 1px solid var(--border); background: var(--input); color: var(--dim); cursor: pointer; transition: all .1s; font-family: var(--mono); letter-spacing: .4px; text-transform: uppercase; white-space: nowrap; }
+        .btn:hover { border-color: var(--bhl); color: var(--text); background: var(--hover); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .btn.primary { background: var(--accent); color: #0a1a12; border-color: var(--accent); }
+        .btn.primary:hover { opacity: .88; }
+        .btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        /* ── Detail View ── */
+        .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .back-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--border); background: var(--input); color: var(--dim); border-radius: var(--r); cursor: pointer; transition: all .1s; flex-shrink: 0; }
+        .back-btn:hover { border-color: var(--bhl); color: var(--text); }
+        .back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .topbar-title { font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+        .topbar-sub   { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+        .metric-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border: 1px solid var(--border); border-radius: var(--r); background: var(--border); overflow: hidden; margin-bottom: 10px; }
+        .metric-group  { background: var(--card); padding: 12px 14px; }
+        .metric-group-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--muted); font-family: var(--mono); margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
+        .metric-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+        .metric-item   {}
+        .metric-label  { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-family: var(--mono); }
+        .metric-value  { font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: -.5px; line-height: 1.2; margin-top: 2px; }
+        .metric-value.good   { color: var(--green); }
+        .metric-value.warn   { color: var(--amber); }
+        .metric-value.bad    { color: var(--red); }
+        .metric-value.accent { color: var(--accent); }
+        .metric-value.blue   { color: var(--blue); }
+        .metric-unit  { font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 2px; font-family: var(--mono); letter-spacing: 0; }
+        .metric-sub   { font-size: 10px; color: var(--dim); font-family: var(--mono); margin-top: 1px; }
+
+        /* ── Charts — improved ── */
+        .charts-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 1px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--border);
+            overflow: hidden;
+        }
+        .chart-panel {
+            background: var(--card);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-panel-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 13px 14px 0;
+        }
+        .chart-panel-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted); font-family: var(--mono);
+        }
+        /* min/max badge in header */
+        .chart-panel-minmax {
+            display: flex; gap: 10px; align-items: baseline;
+        }
+        .chart-panel-minmax span {
+            font-size: 9px; font-family: var(--mono); color: var(--muted);
+        }
+        .chart-panel-minmax .mm-val { color: var(--dim); font-weight: 600; }
+
+        .chart-panel-value {
+            font-size: 22px; font-weight: 700; font-family: var(--mono);
+            letter-spacing: -.6px; padding: 2px 14px 8px;
+            line-height: 1.2;
+        }
+        .chart-panel-value .cv-unit {
+            font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px;
+        }
+        /* canvas wrapper for relative positioning of y-axis labels */
+        .chart-canvas-wrap {
+            position: relative;
+            height: 80px;
+        }
+        .chart-canvas-wrap canvas {
+            width: 100%;
+            height: 80px;
+            display: block;
+        }
+        /* y-axis tick labels */
+        .chart-y-labels {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            justify-content: space-between;
+            padding: 4px 0 4px;
+            pointer-events: none;
+        }
+        .chart-y-label {
+            font-size: 8px; font-family: var(--mono);
+            color: var(--muted);
+            padding-left: 4px;
+            line-height: 1;
+        }
+
+        /* ── Plugin table ── */
+        .plugin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .plugin-table thead th { text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-family: var(--mono); padding: 0 10px 8px; border-bottom: 1px solid var(--border); }
+        .plugin-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 11px; }
+        .plugin-table tbody tr:last-child td { border-bottom: none; }
+        .plugin-table tbody tr:hover td { background: var(--hover); }
+        .impact-bar { width: 80px; height: 3px; background: var(--active); border-radius: 1px; overflow: hidden; display: inline-block; vertical-align: middle; }
+        .impact-bar-fill { height: 100%; border-radius: 1px; }
+
+        /* ── Sample tree ── */
+        .tree-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .tree-search { background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--r); padding: 6px 10px; font-size: 11px; font-family: var(--mono); min-width: 220px; transition: border-color .15s; }
+        .tree-search:focus { outline: none; border-color: var(--accent); }
+        .tree-search::placeholder { color: var(--muted); }
+        .tree-check-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); font-family: var(--mono); cursor: pointer; user-select: none; }
+        .tree-check-label input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+        .tree-btn { padding: 5px 10px; font-size: 10px; font-weight: 700; border: 1px solid var(--border); background: var(--input); color: var(--dim); border-radius: var(--r); cursor: pointer; font-family: var(--mono); text-transform: uppercase; letter-spacing: .4px; transition: all .1s; }
+        .tree-btn:hover { border-color: var(--bhl); color: var(--text); background: var(--hover); }
+        .tree-root { font-family: var(--mono); font-size: 11px; }
+        .t-row { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 0; padding: 0; border-radius: var(--r); cursor: pointer; transition: background .08s; user-select: none; }
+        .t-row:hover { background: var(--hover); }
+        .t-row.leaf { cursor: default; }
+        .t-row.leaf:hover { background: transparent; }
+        .t-indent { display: flex; align-items: center; justify-content: flex-end; padding: 5px 4px 5px 0; flex-shrink: 0; }
+        .t-arrow { width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; transition: transform .15s; }
+        .t-arrow svg { width: 9px; height: 9px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+        .t-arrow.open { transform: rotate(90deg); }
+        .t-arrow.hidden { visibility: hidden; }
+        .t-name { padding: 5px 6px 5px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .t-name .pkg { color: var(--muted); }
+        .t-name .cls { color: var(--blue); }
+        .t-name .mtd { color: var(--accent); }
+        .t-name .plg { color: var(--text); font-weight: 700; }
+        .t-bar-wrap { padding: 5px 6px; flex-shrink: 0; }
+        .t-bar { width: 56px; height: 4px; background: var(--active); border-radius: 1px; overflow: hidden; }
+        .t-bar-fill { height: 100%; border-radius: 1px; transition: width .3s; }
+        .t-pct { padding: 5px 4px 5px 0; min-width: 48px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .t-samples { padding: 5px 8px 5px 6px; min-width: 56px; text-align: right; color: var(--muted); font-size: 10px; flex-shrink: 0; }
+        .t-children { overflow: hidden; transition: max-height .2s ease; }
+        .t-children.collapsed { max-height: 0 !important; }
+        .t-block { position: relative; }
+        .t-block::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 1px; background: var(--border); pointer-events: none; }
+        .t-block.level-0::before { display: none; }
+
+        /* GC table */
+        .gc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .gc-table th { text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-family: var(--mono); padding: 0 10px 8px; border-bottom: 1px solid var(--border); }
+        .gc-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+        .gc-table tr:last-child td { border-bottom: none; }
+
+        @media (max-width: 700px) {
+            .metric-groups { grid-template-columns: 1fr; }
+            .charts-row    { grid-template-columns: 1fr; }
+            .server-row-item { grid-template-columns: 1fr; gap: 10px; }
+            .srv-stats-col { justify-content: flex-start; }
+        }
     </style>
 </head>
 <body>
-<div id="app"><div class="no-data">Loading profiling data...</div></div>
+<div id="app"><div class="no-data">Loading profiling data…</div></div>
 
 <script>
-(function(){
-  const p=new URLSearchParams(location.search),t=p.get('theme');
-  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
-  window.addEventListener('message',function(e){
-    if(e.data&&e.data.type==='ip-theme-change'){
-      const th=e.data.theme;
-      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme',th);
+    // ── Theme init ──
+    (function(){
+        const p = new URLSearchParams(location.search), t = p.get('theme');
+        if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
+        window.addEventListener('message', function(e){
+            if (e.data && e.data.type === 'ip-theme-change') {
+                const th = e.data.theme;
+                if (!th || th === 'default') document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', th);
+            }
+        });
+    })();
+
+    // ── Constants & state ──
+    const API      = location.origin;
+    const MAX_HIST = 180;
+    const SS_KEY   = 'ip_profiler_filters';
+
+    let selectedServer      = null;
+    let selectedServerLabel = null;
+    let viewMode    = 'list';
+    let firstRender = true;
+
+    // ── Persistent per-server history maps (survive re-renders) ──
+    // Key: server name → Array of numbers, capped at MAX_HIST
+    const tpsHistory = {};   // was being wiped on each render cycle — fixed
+    const cpuHistory = {};
+
+    let openNodes    = new Set();
+    let totalSamples = 1;
+
+    // ── Persist filter state across auto-reloads ──
+    function saveFilterState() {
+        const q  = document.getElementById('treeFilter')?.value  || '';
+        const hj = document.getElementById('hideJava')?.checked  ?? true;
+        try { sessionStorage.setItem(SS_KEY, JSON.stringify({ q, hj })); } catch {}
     }
-  });
-})();
-
-const token=new URLSearchParams(location.search).get('token');
-const API=location.origin;
-const MAX_HIST=30;
-let selectedServer=null;
-let selectedServerLabel=null;
-let viewMode='list';
-let firstRender=true;
-let tpsHistory={};
-let cpuHistory={};
-let openNodes=new Set();
-let totalSamples=1;
-
-async function api(path,opts={}){
-  const h={'Content-Type':'application/json','Authorization':'Bearer '+token};
-  const r=await fetch(API+'/api/modules/profiler/'+path,{...opts,headers:h});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw d;
-  return d;
-}
-async function rootApi(path,opts={}){
-  const h={'Content-Type':'application/json','Authorization':'Bearer '+token};
-  const r=await fetch(API+path,{...opts,headers:h});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw d;
-  return d;
-}
-function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
-function num(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
-function numStr(v,d=1,f='0.0'){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):f;}
-function classify(v,w,b,a=true){const n=num(v,0);return a?(n>=w?'good':n>=b?'warn':'bad'):(n<=w?'good':n<=b?'warn':'bad');}
-function ageLabel(ts){const t=num(ts,0);if(t<=0)return 'n/a';const s=Math.max(0,Math.floor((Date.now()-t)/1000));if(s<60)return s+'s ago';const m=Math.floor(s/60);if(m<60)return m+'m ago';return Math.floor(m/60)+'h ago';}
-function anim(cls){return firstRender?cls:'';}
-function encodeArg(v){return encodeURIComponent(String(v||''));}
-
-async function render(){
-  try{
-    const status=await api('status');
-    const srvResp=await api('servers');
-    const srvList=srvResp.servers||[];
-    let targets=[];
-    let velocityStatus={servers:[]};
-    try{const tResp=await api('targets');targets=tResp.servers||[];}catch(e){}
-    try{velocityStatus=await rootApi('/api/status');}catch(e){}
-
-    if(viewMode==='detail' && (!selectedServer || !srvList.find(s=>s.name===selectedServer))){
-      viewMode='list';
+    function loadFilterState() {
+        try { return JSON.parse(sessionStorage.getItem(SS_KEY) || '{}'); } catch { return {}; }
     }
 
-    if(viewMode==='list'){
-      renderServerPicker(status,srvList,targets,velocityStatus.servers||[]);
-    }else{
-      await renderServerDetail(status,srvList,targets,velocityStatus.servers||[]);
+    // ── API helpers ──
+    async function api(path, opts = {}) {
+        const h = { 'Content-Type': 'application/json' };
+        const r = await fetch(API + '/api/modules/profiler/' + path, { ...opts, headers: h, credentials: 'same-origin' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw d;
+        return d;
+    }
+    async function rootApi(path, opts = {}) {
+        const h = { 'Content-Type': 'application/json' };
+        const r = await fetch(API + path, { ...opts, headers: h, credentials: 'same-origin' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw d;
+        return d;
+    }
+    function esc(s)   { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+    function num(v,d=0)    { const n = Number(v); return Number.isFinite(n) ? n : d; }
+    function numStr(v,d=1) { const n = Number(v); return Number.isFinite(n) ? n.toFixed(d) : '—'; }
+    function classify(v,w,b,asc=true) {
+        const n = num(v,0);
+        return asc ? (n>=w?'good':n>=b?'warn':'bad') : (n<=w?'good':n<=b?'warn':'bad');
+    }
+    function ageLabel(ts) {
+        const t = num(ts, 0); if (t <= 0) return 'n/a';
+        const s = Math.max(0, Math.floor((Date.now()-t)/1000));
+        if (s < 60) return s+'s ago'; const m = Math.floor(s/60);
+        if (m < 60) return m+'m ago'; return Math.floor(m/60)+'h ago';
+    }
+    function encodeArg(v) { return encodeURIComponent(String(v||'')); }
+    function a(cls) { return firstRender ? cls : ''; }
+
+    // ── History helpers ──
+    // Merges backend-provided history with any locally accumulated points,
+    // deduplicates by preferring the backend array (which is the source of truth),
+    // then appends the freshest live sample if it's newer than the last stored point.
+    function mergeHistory(key, map, backendArr, liveSample) {
+        if (!map[key]) map[key] = [];
+
+        if (backendArr && backendArr.length) {
+            // Backend returned a history array — use it as the base, but keep any
+            // extra live points we accumulated that are beyond the backend window.
+            const existing = map[key];
+            // If the backend array is longer or the same length, it supersedes memory
+            if (backendArr.length >= existing.length) {
+                map[key] = backendArr.map(v => Math.max(num(v, 0), 0)).slice(-MAX_HIST);
+            }
+            // Either way, we want to ensure the very latest sample is appended
+            // only if it differs from the tail (avoids duplicate flat lines)
+            const tail = map[key][map[key].length - 1];
+            if (Math.abs(liveSample - tail) > 0.001) {
+                map[key].push(liveSample);
+                if (map[key].length > MAX_HIST) map[key].shift();
+            }
+        } else {
+            // No backend history — accumulate live samples ourselves
+            map[key].push(liveSample);
+            if (map[key].length > MAX_HIST) map[key].shift();
+        }
     }
 
-    firstRender=false;
-  }catch(e){
-    document.getElementById('app').innerHTML='<div class="no-data">'+esc(e.error||e.message||'Failed to load profiling data')+'</div>';
-    firstRender=false;
-  }
-}
+    // ── Tracks whether the detail shell is currently rendered ──
+    let detailShellServer = null; // which server the shell was built for
 
-function renderServerPicker(status,srvList,targets,velocityServers){
-  const nameByExtenderId={};
-  (velocityServers||[]).forEach(v=>{
-    if(v && v.extender_enrolled && v.extender_id && v.name){
-      nameByExtenderId[String(v.extender_id)] = String(v.name);
+    // ── Main render loop ──
+    async function render() {
+        try {
+            const status  = await api('status');
+            const srvResp = await api('servers');
+            const srvList = srvResp.servers || [];
+            let targets = [];
+            let velServers = [];
+            try { const tr = await api('targets');    targets    = tr.servers  || []; } catch {}
+            try { const vs = await rootApi('/api/status'); velServers = vs.servers || []; } catch {}
+
+            if (viewMode === 'detail' && (!selectedServer || !srvList.find(s => s.name === selectedServer))) {
+                viewMode = 'list';
+                detailShellServer = null;
+            }
+            if (viewMode === 'list') {
+                detailShellServer = null;
+                renderServerPicker(status, srvList, targets, velServers);
+            } else {
+                await renderServerDetail(status, srvList, targets, velServers);
+            }
+
+            firstRender = false;
+        } catch(e) {
+            document.getElementById('app').innerHTML =
+                '<div class="no-data">' + esc(e.error || e.message || 'Failed to load profiling data') + '</div>';
+            firstRender = false;
+            detailShellServer = null;
+        }
     }
-  });
 
-  if(!targets.length){
-    document.getElementById('app').innerHTML='<div class="no-data">No deployable extender servers found.</div>';
-    return;
-  }
+    // ═══════════════════════════════════════════
+    //  SERVER PICKER
+    // ═══════════════════════════════════════════
+    function renderServerPicker(status, srvList, targets, velServers) {
+        const nameById = {};
+        (velServers||[]).forEach(v => {
+            if (v && v.extender_enrolled && v.extender_id && v.name)
+                nameById[String(v.extender_id)] = String(v.name);
+        });
 
-  let html='<div class="server-grid '+anim('slide-up')+'">';
-  targets.forEach(t=>{
-    const dashboardName=t.name||t.server||t.extender_id||'Unknown';
-    const mappedName=nameByExtenderId[String(t.extender_id||'')] || null;
-    const name=mappedName || dashboardName;
-    const id=t.identifier||t.extender_id||name;
-    const hasData=!!t.has_data;
-    const extended=!!t.extended;
-    const tps=num(t.tps,0);
-    const players=num(t.players,0);
-    const cardClass=hasData?'good':'warn';
-    html+='<div class="server-card"'+(hasData?' onclick="openServerByEncoded(\''+encodeArg(dashboardName)+'\',\''+encodeArg(name)+'\')"':'')+'>'+
-      '<div class="title">'+esc(name)+'</div>'+
-      '<div class="meta">'+esc((t.server_ip||'?')+':'+num(t.server_port,0))+'</div>'+
-      '<div class="badges">'+
-        '<span class="badge '+cardClass+'">'+(hasData?'Receiving data':'No profiler data')+'</span>'+
-        '<span class="badge '+(extended?'good':'warn')+'">'+(extended?'Extended':'Not extended')+'</span>'+
-      '</div>'+
-      '<div class="meta" style="margin-top:10px">Players: '+players+' | TPS: '+numStr(tps,1)+'</div>'+
-      '<div class="actions">'+
-        (hasData?'<button class="btn primary" onclick="event.stopPropagation();openServerByEncoded(\''+encodeArg(dashboardName)+'\',\''+encodeArg(name)+'\')">Open Dashboard</button>':'')+
-        '<button class="btn'+(extended?'':' primary')+'" onclick="event.stopPropagation();extendServerByEncoded(\''+encodeArg(id)+'\',this)">'+(extended?'Re-Deploy':'Deploy Extender')+'</button>'+
-      '</div>'+
-    '</div>';
-  });
-  html+='</div>';
+        if (!targets.length) {
+            document.getElementById('app').innerHTML = '<div class="no-data">No extender servers found.</div>';
+            return;
+        }
 
-  if(!srvList.length){
-    html+='<div class="no-data">No servers are currently reporting profiling data.</div>';
-  }
-  document.getElementById('app').innerHTML=html;
-}
+        // On subsequent renders, patch TPS/player numbers in-place to avoid flash
+        const existingTable = document.querySelector('.server-table');
+        if (existingTable && !firstRender) {
+            targets.forEach(t => {
+                const dashName = t.name || t.server || t.extender_id || 'Unknown';
+                const safeId   = 'srow_' + dashName.replace(/[^a-zA-Z0-9]/g, '_');
+                const row = document.getElementById(safeId);
+                if (!row) return;
+                const tps      = num(t.tps, 0);
+                const players  = num(t.players, 0);
+                const tpsColor = tps >= 19 ? 'var(--green)' : tps >= 15 ? 'var(--amber)' : 'var(--red)';
+                const tpsEl    = row.querySelector('.srv-tps-val');
+                const plEl     = row.querySelector('.srv-players-val');
+                if (tpsEl) { tpsEl.textContent = numStr(tps,1); tpsEl.style.color = tpsColor; }
+                if (plEl)  { plEl.textContent  = String(players); }
+            });
+            return;
+        }
 
-async function renderServerDetail(status,srvList,targets,velocityServers){
-  const detail=await api('server/'+encodeURIComponent(selectedServer));
-  const srv=srvList.find(s=>s.name===selectedServer)||{};
-  const target=targets.find(t=>t&&t.name===selectedServer)||{};
+        let html = `
+    <div class="picker-header ${a('fade-in')}">
+      <div>
+        <div class="picker-title">Profiler</div>
+        <div class="picker-subtitle">Select a server to inspect</div>
+      </div>
+    </div>
+    <div class="server-table ${a('slide-up')}">`;
 
-  if(!tpsHistory[selectedServer])tpsHistory[selectedServer]=[];
-  if(!cpuHistory[selectedServer])cpuHistory[selectedServer]=[];
-  tpsHistory[selectedServer].push(num(detail.tps_10s ?? srv.tps_10s, 0));
-  const cpuSample=num(detail.process_cpu ?? srv.process_cpu ?? detail.system_cpu ?? srv.system_cpu, -1);
-  cpuHistory[selectedServer].push(Math.max(cpuSample,0));
-  if(tpsHistory[selectedServer].length>MAX_HIST)tpsHistory[selectedServer].shift();
-  if(cpuHistory[selectedServer].length>MAX_HIST)cpuHistory[selectedServer].shift();
+        targets.forEach(t => {
+            const dashName   = t.name || t.server || t.extender_id || 'Unknown';
+            const mappedName = nameById[String(t.extender_id||'')] || null;
+            const name       = mappedName || dashName;
+            const id         = t.identifier || t.extender_id || name;
+            const safeId     = 'srow_' + dashName.replace(/[^a-zA-Z0-9]/g, '_');
+            const hasData    = !!t.has_data;
+            const extended   = !!t.extended;
+            const tps        = num(t.tps, 0);
+            const players    = num(t.players, 0);
+            const tpsColor   = tps >= 19 ? 'var(--green)' : tps >= 15 ? 'var(--amber)' : 'var(--red)';
 
-  const tps=num(detail.tps_10s ?? srv.tps_10s, 0);
-  const mspt=num(detail.mspt_mean ?? srv.mspt_mean, 0);
-  const cpu=num(detail.process_cpu ?? srv.process_cpu ?? detail.system_cpu ?? srv.system_cpu, -1);
-  const memUsed=num(detail.heap_used_mb ?? srv.heap_used_mb, 0);
-  const memMax=num(detail.heap_max_mb ?? srv.heap_max_mb, 0);
-  const players=num(detail.players ?? srv.players ?? target.players, 0);
-  const gcPerMin=num(detail.gc_frequency_per_min, 0);
-  const gcPause=num(detail.gc_avg_pause_ms, 0);
-  const sampleInterval=num(detail.sample_interval_ms ?? srv.sample_interval_ms ?? status.sample_interval_ms, 0);
-  const reportInterval=num(detail.report_interval_sec ?? srv.report_interval_sec ?? status.report_interval_sec, 0);
-  const totalSamples=num(detail.total_samples, 0);
-  const dataFreshness=ageLabel(detail.last_update ?? srv.last_update);
-  const memPct=memMax>0?Math.round(memUsed/memMax*100):0;
-
-  const nameByExtenderId={};
-  (velocityServers||[]).forEach(v=>{ if(v && v.extender_enrolled && v.extender_id && v.name){ nameByExtenderId[String(v.extender_id)] = String(v.name);} });
-  const displayName = selectedServerLabel || nameByExtenderId[String(target.extender_id||'')] || selectedServer;
-
-  let html='<div class="topbar '+anim('fade-in')+'">'+
-    '<button class="back-arrow" onclick="backToServers()" aria-label="Back">&#8592;</button>'+
-    '<div class="prof-icon"><svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 1 1 16 0"/><path d="M12 14l3-4"/><circle cx="12" cy="14" r="1.5"/></svg></div>'+
-    '<div class="topbar-title">'+esc(displayName)+'</div>'+
-  '</div>';
-  html+='<div class="top-groups '+anim('slide-up')+'">'+
-    '<div class="group-card"><div class="group-title">Runtime Health</div><div class="group-grid">'+
-      '<div><div class="metric-label">TPS</div><div class="metric-value '+classify(tps,19,15,true)+'">'+numStr(tps,1)+'</div></div>'+
-      '<div><div class="metric-label">MSPT</div><div class="metric-value '+classify(mspt,30,45,false)+'">'+numStr(mspt,1)+'ms</div></div>'+
-      '<div><div class="metric-label">CPU</div><div class="metric-value '+(cpu<0?'hl':classify(cpu,60,80,false))+'">'+(cpu>=0?numStr(cpu,1)+'%':'N/A')+'</div></div>'+
-      '<div><div class="metric-label">Players</div><div class="metric-value hl">'+players+'</div></div>'+
-    '</div></div>'+
-    '<div class="group-card"><div class="group-title">Memory</div><div class="group-grid">'+
-      '<div><div class="metric-label">Heap Usage</div><div class="metric-value '+classify(memPct,70,85,false)+'">'+memPct+'%</div></div>'+
-      '<div><div class="metric-label">Heap Size</div><div class="metric-value">'+memUsed+'/'+memMax+'</div><div class="metric-sub">MB</div></div>'+
-      '<div><div class="metric-label">GC / Min</div><div class="metric-value">'+numStr(gcPerMin,1)+'</div></div>'+
-      '<div><div class="metric-label">Avg Pause</div><div class="metric-value">'+numStr(gcPause,2)+'</div><div class="metric-sub">ms</div></div>'+
-    '</div></div>'+
-    '<div class="group-card"><div class="group-title">Sampling</div><div class="group-grid">'+
-      '<div><div class="metric-label">Sample Interval</div><div class="metric-value">'+sampleInterval+'</div><div class="metric-sub">ms</div></div>'+
-      '<div><div class="metric-label">Report Interval</div><div class="metric-value">'+reportInterval+'</div><div class="metric-sub">sec</div></div>'+
-      '<div><div class="metric-label">Total Samples</div><div class="metric-value">'+totalSamples+'</div></div>'+
-      '<div><div class="metric-label">Last Update</div><div class="metric-value">'+dataFreshness+'</div></div>'+
-    '</div></div>'+
-  '</div>';
-
-  html+='<div class="charts-grid '+anim('slide-up')+'" style="animation-delay:.05s">'+
-      '<div class="chart-card"><h3>TPS History</h3><canvas id="tpsChart" height="80"></canvas></div>'+
-      '<div class="chart-card"><h3>CPU History</h3><canvas id="cpuChart" height="80"></canvas></div>'+
-    '</div>';
-
-  const pluginData=detail.hot_method_tree;
-  if(pluginData && pluginData.plugins && pluginData.plugins.length){
-    html+='<div class="card '+anim('slide-up')+'" style="animation-delay:.1s"><h3>Top Plugins / Subsystems</h3><table><thead><tr><th>Name</th><th>CPU %</th><th>Samples</th><th>Impact</th></tr></thead><tbody>';
-    pluginData.plugins.forEach(p=>{
-      const isInfra=p.is_infrastructure;
-      const color=isInfra?'var(--accent)':(p.percent>10?'var(--red)':p.percent>5?'var(--amber)':'var(--green)');
-      html+='<tr><td style="font-weight:600">'+esc(p.name)+'</td><td style="color:'+color+';font-weight:600">'+numStr(p.percent,1)+'</td><td>'+num(p.samples,0)+'</td><td><div class="tree-bar"><div class="tree-bar-fill" style="width:'+Math.min(num(p.percent,0)*2,100)+'%;background:'+color+'"></div></div></td></tr>';
-    });
-    html+='</tbody></table></div>';
-  }
-
-  const hotTree=detail.hot_method_tree;
-  const topMethods=detail.top_methods||[];
-  html+='<div class="card '+anim('slide-up')+'" style="animation-delay:.12s"><h3>Sample Tree (Plugins/Subsystems)</h3>';
-  if(hotTree && hotTree.plugins && hotTree.plugins.length){
-    html+='<div class="filters"><input type="text" id="treeFilter" placeholder="Filter classes/methods..." oninput="filterTree()"><label><input type="checkbox" id="hideJava" onchange="filterTree()||renderHotTree(window.__hotTree)" checked> Hide Server/JVM Subsystems</label><button class="collapse-all-btn" onclick="collapseAll()">Collapse All</button><button class="collapse-all-btn" onclick="expandAll()">Expand All</button></div><div class="method-tree" id="methodTree"></div>';
-  } else if(topMethods.length){
-    html+='<table><thead><tr><th>Method</th><th>Samples</th><th>%</th><th>Impact</th></tr></thead><tbody>';
-    topMethods.forEach(m=>{
-      const pct=num(m.percent!==undefined?m.percent:m.percentage,0);
-      const color=pct>10?'var(--red)':pct>5?'var(--amber)':'var(--accent)';
-      html+='<tr><td style="font-family:var(--mono),monospace;font-size:11px">'+esc(m.method||m.name||'?')+'</td><td>'+num(m.count||m.samples,0)+'</td><td style="font-weight:600;color:'+color+'">'+numStr(pct,1)+'</td><td><div class="tree-bar"><div class="tree-bar-fill" style="width:'+Math.min(pct*2,100)+'%;background:'+color+'"></div></div></td></tr>';
-    });
-    html+='</tbody></table>';
-  } else {
-    html+='<div style="color:var(--muted);font-size:12px;padding:16px 0">No plugin profiling data yet. Wait for the next report.</div>';
-  }
-  html+='</div>';
-
-  const gcCollectors=Array.isArray(detail.gc_collectors)?detail.gc_collectors:[];
-  if(gcCollectors.length||detail.gc_collections!==undefined){
-    html+='<div class="card '+anim('slide-up')+'" style="animation-delay:.15s"><h3>Garbage Collection</h3>';
-    if(gcCollectors.length){
-      html+='<table><thead><tr><th>Collector</th><th>Collections</th><th>Total Time</th><th>Avg Time</th></tr></thead><tbody>';
-      gcCollectors.forEach(c=>{
-        const count=num(c.collections,0),timeMs=num(c.collection_time_ms,0),avg=count>0?(timeMs/count).toFixed(1):'0';
-        html+='<tr><td>'+esc(c.name)+'</td><td>'+count+'</td><td>'+timeMs+'ms</td><td>'+avg+'ms</td></tr>';
-      });
-      html+='</tbody></table>';
+            html += `<div id="${safeId}" class="server-row-item${hasData?' clickable':''}"
+      ${hasData ? `onclick="openServerByEncoded('${encodeArg(dashName)}','${encodeArg(name)}')"` : ''}>
+      <div class="srv-name-col">
+        <div class="srv-title">
+          ${esc(name)}
+          ${hasData ? `<span class="badge good">Live</span>` : `<span class="badge dead">No Data</span>`}
+          ${extended ? `<span class="badge info">Extended</span>` : `<span class="badge warn">Not Extended</span>`}
+        </div>
+        <div class="srv-addr">${esc((t.server_ip||'?')+':'+ num(t.server_port,0))}</div>
+      </div>
+      <div class="srv-stats-col">
+        <div class="srv-stat-item">
+          <div class="sl">TPS</div>
+          <div class="sv srv-tps-val" style="color:${tpsColor}">${numStr(tps,1)}</div>
+        </div>
+        <div class="srv-stat-item">
+          <div class="sl">Players</div>
+          <div class="sv srv-players-val">${players}</div>
+        </div>
+      </div>
+      <div class="srv-actions-col">
+        ${hasData ? `<button class="btn primary" onclick="event.stopPropagation();openServerByEncoded('${encodeArg(dashName)}','${encodeArg(name)}')">
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg> Open
+        </button>` : ''}
+        <button class="btn" onclick="event.stopPropagation();extendServerByEncoded('${encodeArg(id)}',this)">
+          ${extended ? 'Re-Deploy' : 'Deploy'}
+        </button>
+        ${extended ? `<button class="btn" onclick="event.stopPropagation();unextendServerByEncoded('${encodeArg(id)}',this)">Un-Deploy</button>` : ''}
+      </div>
+    </div>`;
+        });
+        html += '</div>';
+        document.getElementById('app').innerHTML = html;
     }
-    html+='</div>';
-  }
 
-  const appEl=document.getElementById('app');
-  appEl.innerHTML=html;
-  setTimeout(()=>{
-    const css=getComputedStyle(document.documentElement);
-    drawSparkline('tpsChart',tpsHistory[selectedServer]||[],{color:css.getPropertyValue('--accent').trim(),max:20});
-    drawSparkline('cpuChart',cpuHistory[selectedServer]||[],{color:css.getPropertyValue('--blue').trim(),max:100,warnLine:80});
-    window.__hotTree=hotTree;
-    if(hotTree)renderHotTree(hotTree);
-  },40);
-}
+    // ═══════════════════════════════════════════
+    //  DETAIL VIEW
+    // ═══════════════════════════════════════════
 
-function openServerByEncoded(v,label){selectedServer=decodeURIComponent(v);selectedServerLabel=label?decodeURIComponent(label):selectedServer;viewMode='detail';render();}
-function backToServers(){viewMode='list';selectedServerLabel=null;render();}
-async function extendServerByEncoded(v,btn){
-  const name=decodeURIComponent(v);
-  if(btn){btn.disabled=true;btn.textContent='Deploying...';}
-  try{
-    await api('extend/'+encodeURIComponent(name),{method:'POST'});
-    if(btn){btn.textContent='Deployed';}
-    setTimeout(render,1200);
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent='Failed';}
-    alert(e.error||'Failed to deploy profiler extender');
-  }
-}
+    // Helper — set text content AND className on a live element without touching the DOM tree
+    function patchEl(id, text, cls) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (text !== undefined && el.textContent !== String(text)) el.textContent = String(text);
+        if (cls  !== undefined && el.className   !== cls)          el.className   = cls;
+    }
+    // Helper — set innerHTML AND optionally className on a live element
+    function patchHTML(id, html, cls) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = html;
+        if (cls !== undefined) el.className = cls;
+        // NOTE: if cls is omitted, className is left untouched
+    }
+    function patchText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(text);
+    }
+    function patchStyle(id, prop, val) {
+        const el = document.getElementById(id);
+        if (el) el.style[prop] = val;
+    }
 
-function drawSparkline(id,data,opts={}){
-  const canvas=document.getElementById(id);if(!canvas||data.length<2)return;
-  const ctx=canvas.getContext('2d');
-  const dpr=window.devicePixelRatio||1;
-  const w=canvas.parentElement.clientWidth-32,h=80;
-  canvas.width=w*dpr;canvas.height=h*dpr;
-  canvas.style.width=w+'px';canvas.style.height=h+'px';
-  ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
+    async function renderServerDetail(status, srvList, targets, velServers) {
+        const detail  = await api('server/' + encodeURIComponent(selectedServer));
+        const srv     = srvList.find(s => s.name === selectedServer) || {};
+        const target  = targets.find(t => t && t.name === selectedServer) || {};
+        const nameById = {};
+        (velServers||[]).forEach(v => { if(v && v.extender_enrolled && v.extender_id && v.name) nameById[String(v.extender_id)] = String(v.name); });
+        const displayName = selectedServerLabel || nameById[String(target.extender_id||'')] || selectedServer;
 
-  let max=Math.max(...data,1);if(opts.max)max=Math.max(max,opts.max);
-  const pad=4,gw=w-pad*2,gh=h-pad*2;
-  const css=getComputedStyle(document.documentElement);
+        // ── Build history ──
+        const history    = detail.history || {};
+        const backendTps = Array.isArray(history.tps) ? history.tps : [];
+        const backendCpu = Array.isArray(history.cpu) ? history.cpu : [];
 
-  ctx.strokeStyle=css.getPropertyValue('--border').trim()||'rgba(255,255,255,.08)';ctx.lineWidth=1;
-  for(let i=0;i<4;i++){const y=pad+gh*(i/3);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(pad+gw,y);ctx.stroke();}
-  if(opts.warnLine){const y=pad+gh*(1-opts.warnLine/max);ctx.strokeStyle=css.getPropertyValue('--red').trim();ctx.globalAlpha=.35;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(pad+gw,y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;}
+        const tpsSample  = num(detail.tps_10s ?? srv.tps_10s, 0);
+        const cpuRaw     = num(detail.process_cpu ?? srv.process_cpu ?? detail.system_cpu ?? srv.system_cpu, -1);
+        const cpuSample  = Math.max(cpuRaw, 0);
 
-  ctx.beginPath();
-  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*gw;const y=pad+gh*(1-v/max);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.lineTo(pad+gw,pad+gh);ctx.lineTo(pad,pad+gh);ctx.closePath();
-  const c=opts.color||'#22d3a7',grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,c+'30');grad.addColorStop(1,c+'05');ctx.fillStyle=grad;ctx.fill();
-  ctx.beginPath();
-  data.forEach((v,i)=>{const x=pad+(i/(data.length-1))*gw;const y=pad+gh*(1-v/max);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.strokeStyle=c;ctx.lineWidth=2;ctx.stroke();
-}
+        mergeHistory(selectedServer + '_tps', tpsHistory, backendTps, tpsSample);
+        mergeHistory(selectedServer + '_cpu', cpuHistory, backendCpu, cpuSample);
 
-function renderHotTree(hot_method_tree){
-  const el=document.getElementById('methodTree');
-  if(!el||!hot_method_tree||!hot_method_tree.plugins)return;
-  const plugins=hot_method_tree.plugins;
-  let maxSamples=0;plugins.forEach(p=>maxSamples+=p.samples);totalSamples=maxSamples||1;
-  const hideJava=document.getElementById('hideJava')?.checked??true;
-  let html='';plugins.forEach(p=>{if(hideJava&&p.is_infrastructure)return;html+=renderPluginNode(p);});
-  el.innerHTML=html||'<div style="color:var(--dim);padding:10px">No matching subsystems found.</div>';
-}
-function renderPluginNode(p){
-  const id='plug_'+p.name.replace(/[^a-zA-Z0-9]/g,'_'),pct=(p.samples/totalSamples)*100,barColor=p.is_infrastructure?'var(--accent)':(pct>20?'var(--red)':pct>10?'var(--amber)':'var(--green)'),isOpen=openNodes.has(id);
-  let html='<div class="tree-row" onclick="toggleNode(\''+id+'\')" data-name="'+esc(p.name).toLowerCase()+'"><span class="tree-toggle '+(p.classes&&p.classes.length?'':'leaf')+' '+(isOpen?'open':'')+'" id="tog_'+id+'">></span><div class="tree-bar"><div class="tree-bar-fill" style="width:'+Math.min(pct*2,100)+'%;background:'+barColor+'"></div></div><span class="tree-name" style="font-weight:700">'+esc(p.name)+'</span><span class="tree-pct" style="color:'+barColor+'">'+pct.toFixed(1)+'%</span><span class="tree-samples">'+p.samples+' samples</span></div>';
-  if(p.classes&&p.classes.length){html+='<div class="tree-children '+(isOpen?'':'collapsed')+'" id="ch_'+id+'">';p.classes.forEach(c=>{html+='<div class="tree-node">'+renderClassNode(c,p.name)+'</div>';});html+='</div>';}
-  return html;
-}
-function renderClassNode(c,pluginName){
-  const id='cls_'+(pluginName+'_'+c.name).replace(/[^a-zA-Z0-9]/g,'_'),pct=(c.samples/totalSamples)*100,barColor=pct>10?'var(--amber)':'var(--dim)',isOpen=openNodes.has(id),pkg=c.name.includes('.')?c.name.substring(0,c.name.lastIndexOf('.')):'',cls=c.name.includes('.')?c.name.substring(c.name.lastIndexOf('.')+1):c.name;
-  let html='<div class="tree-row" onclick="toggleNode(\''+id+'\')" data-name="'+esc(c.name).toLowerCase()+'"><span class="tree-toggle '+(c.methods&&c.methods.length?'':'leaf')+' '+(isOpen?'open':'')+'" id="tog_'+id+'">></span><div class="tree-bar"><div class="tree-bar-fill" style="width:'+Math.min(pct*2,100)+'%;background:'+barColor+'"></div></div><span class="tree-name">'+(pkg?'<span class="pkg">'+esc(pkg)+'.</span>':'')+'<span class="cls">'+esc(cls)+'</span></span><span class="tree-pct" style="color:var(--text)">'+pct.toFixed(1)+'%</span><span class="tree-samples">'+c.samples+'</span></div>';
-  if(c.methods&&c.methods.length){html+='<div class="tree-children '+(isOpen?'':'collapsed')+'" id="ch_'+id+'">';c.methods.forEach(m=>{html+='<div class="tree-node">'+renderMethodNode(m)+'</div>';});html+='</div>';}
-  return html;
-}
-function renderMethodNode(m){const pct=(m.samples/totalSamples)*100,barColor=pct>5?'var(--accent)':'var(--dim)';return '<div class="tree-row leaf" data-name="'+esc(m.full_name||m.name).toLowerCase()+'"><span class="tree-toggle leaf">></span><div class="tree-bar"><div class="tree-bar-fill" style="width:'+Math.min(pct*2,100)+'%;background:'+barColor+'"></div></div><span class="tree-name"><span class="mtd">'+esc(m.name)+'()</span></span><span class="tree-pct" style="color:var(--text)">'+pct.toFixed(1)+'%</span><span class="tree-samples">'+m.samples+'</span></div>';}
-function toggleNode(id){const ch=document.getElementById('ch_'+id),tog=document.getElementById('tog_'+id);if(!ch)return;ch.classList.toggle('collapsed');const isCollapsed=ch.classList.contains('collapsed');if(tog)tog.classList.toggle('open',!isCollapsed);if(isCollapsed)openNodes.delete(id);else openNodes.add(id);}
-function collapseAll(){document.querySelectorAll('.tree-children').forEach(el=>el.classList.add('collapsed'));document.querySelectorAll('.tree-toggle').forEach(el=>el.classList.remove('open'));openNodes.clear();}
-function expandAll(){document.querySelectorAll('.tree-children').forEach(el=>{el.classList.remove('collapsed');openNodes.add(el.id.replace('ch_',''));});document.querySelectorAll('.tree-toggle:not(.leaf)').forEach(el=>el.classList.add('open'));}
-function filterTree(){const q=(document.getElementById('treeFilter')?.value||'').toLowerCase();document.querySelectorAll('.tree-row').forEach(row=>{const name=row.dataset.name||'';row.style.display=(q&&!name.includes(q))?'none':'';});}
+        const tpsData = tpsHistory[selectedServer + '_tps'] || [];
+        const cpuData = cpuHistory[selectedServer + '_cpu'] || [];
 
-setTimeout(render,100);
-setInterval(render,10000);
+        const tps       = tpsSample;
+        const cpu       = cpuRaw;
+        // MSPT thresholds: Minecraft tick budget = 50ms (20 TPS).
+        // ≤25ms → green (well under budget), ≤40ms → amber (getting heavy), >40ms → red (near the wall)
+        const mspt      = num(detail.mspt_mean    ?? srv.mspt_mean, 0);
+        const memUsed   = num(detail.heap_used_mb ?? srv.heap_used_mb, 0);
+        const memMax    = num(detail.heap_max_mb  ?? srv.heap_max_mb, 0);
+        const players   = num(detail.players      ?? srv.players ?? target.players, 0);
+        const gcPerMin  = num(detail.gc_frequency_per_min, 0);
+        const gcPause   = num(detail.gc_avg_pause_ms, 0);
+        const sampleInt = num(detail.sample_interval_ms  ?? srv.sample_interval_ms  ?? status.sample_interval_ms, 0);
+        const reportInt = num(detail.report_interval_sec ?? srv.report_interval_sec ?? status.report_interval_sec, 0);
+        const totSamples= num(detail.total_samples, 0);
+        const freshness = ageLabel(detail.last_update ?? srv.last_update);
+        const memPct    = memMax > 0 ? Math.round(memUsed/memMax*100) : 0;
+
+        function histStats(arr) {
+            if (!arr.length) return { min: 0, max: 0, avg: 0 };
+            const min = Math.min(...arr), max = Math.max(...arr);
+            const avg = arr.reduce((a,b)=>a+b,0)/arr.length;
+            return { min, max, avg };
+        }
+        const tpsStat = histStats(tpsData);
+        const cpuStat = histStats(cpuData);
+
+        const tpsClass = classify(tps,19,15,true);
+        const msptClass = classify(mspt,25,40,false);  // ≤25 good, ≤40 warn, >40 bad
+        const cpuClass = cpu < 0 ? 'blue' : classify(cpu,60,80,false);
+        const tpsChartColor = tpsClass==='good'?'var(--green)':tpsClass==='warn'?'var(--amber)':'var(--red)';
+        const cpuChartColor = cpuClass==='good'?'var(--green)':cpuClass==='warn'?'var(--amber)':cpuClass==='blue'?'var(--blue)':'var(--red)';
+
+        // ── If the shell is already rendered for this server, patch in-place ──
+        if (detailShellServer === selectedServer && document.getElementById('mv-tps')) {
+            // Topbar sub
+            patchText('detail-freshness', 'Profiler Dashboard · Last update: ' + freshness);
+
+            // Metric values — patch text + class separately to avoid innerHTML blowup
+            patchHTML('mv-tps',      numStr(tps,1),     'metric-value '+tpsClass);
+            patchHTML('mv-mspt',     numStr(mspt,1) + '<span class="metric-unit">ms</span>', 'metric-value '+msptClass);
+            patchHTML('mv-cpu',      cpu>=0 ? numStr(cpu,1)+'<span class="metric-unit">%</span>' : 'N/A', 'metric-value '+(cpu<0?'blue':classify(cpu,60,80,false)));
+            patchHTML('mv-players',  String(players),   'metric-value accent');
+            patchHTML('mv-heappct',  memPct+'<span class="metric-unit">%</span>', 'metric-value '+classify(memPct,70,85,false));
+            patchHTML('mv-heapsz',   memUsed+'<span class="metric-unit">/ '+memMax+' MB</span>', 'metric-value');
+            patchHTML('mv-gcpermin', numStr(gcPerMin,1), 'metric-value');
+            patchHTML('mv-gcpause',  numStr(gcPause,2)+'<span class="metric-unit">ms</span>', 'metric-value');
+            patchHTML('mv-samples',  totSamples.toLocaleString(), 'metric-value');
+            patchHTML('mv-updated',  esc(freshness),    'metric-value');
+
+            // Chart value labels + colors
+            patchHTML('cv-tps', numStr(tps,1)+'<span class="cv-unit">tps</span>');
+            patchStyle('cv-tps', 'color', tpsChartColor);
+            patchHTML('cv-cpu', (cpu>=0?numStr(cpu,1):'N/A')+'<span class="cv-unit">'+(cpu>=0?'%':'')+'</span>');
+            patchStyle('cv-cpu', 'color', cpuChartColor);
+
+            // Chart min/avg/max labels
+            patchText('mm-tps-min', tpsData.length ? Math.min(...tpsData).toFixed(1) : '—');
+            patchText('mm-tps-avg', tpsData.length ? tpsStat.avg.toFixed(1) : '—');
+            patchText('mm-tps-max', tpsData.length ? Math.max(...tpsData).toFixed(1) : '—');
+            patchText('mm-cpu-min', cpuData.length && cpu>=0 ? Math.min(...cpuData).toFixed(1)+'%' : '—');
+            patchText('mm-cpu-avg', cpuData.length && cpu>=0 ? cpuStat.avg.toFixed(1)+'%' : '—');
+            patchText('mm-cpu-max', cpuData.length && cpu>=0 ? Math.max(...cpuData).toFixed(1)+'%' : '—');
+
+            // Redraw sparklines (canvases are retained in the DOM)
+            scheduleCharts(tpsData, cpuData, tpsChartColor, cpuChartColor, tpsClass, cpuClass);
+
+            // Patch plugin table and tree without rebuilding the toolbar/card shell
+            patchPluginTable(detail);
+            patchHotTree(detail.hot_method_tree);
+            return;
+        }
+
+        // ── First render for this server — build the full shell ──
+        // NOTE: detailShellServer is set AFTER innerHTML so patch path never
+        // fires against a DOM that doesn't yet contain the shell elements.
+
+        const hotTree    = detail.hot_method_tree;
+        const topMethods = detail.top_methods || [];
+        const pluginData = detail.hot_method_tree;
+
+        let html = `
+    <div class="topbar ${a('fade-in')}">
+      <button class="back-btn" onclick="backToServers()" title="Back to servers">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="topbar-info">
+        <div class="topbar-title">${esc(displayName)}</div>
+        <div class="topbar-sub" id="detail-freshness">Profiler Dashboard · Last update: ${esc(freshness)}</div>
+      </div>
+    </div>
+
+    <div class="metric-groups ${a('slide-up')}">
+      <div class="metric-group">
+        <div class="metric-group-title">Runtime Health</div>
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-label">TPS</div>
+            <div id="mv-tps" class="metric-value ${tpsClass}">${numStr(tps,1)}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">MSPT</div>
+            <div id="mv-mspt" class="metric-value ${msptClass}">${numStr(mspt,1)}<span class="metric-unit">ms</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">CPU</div>
+            <div id="mv-cpu" class="metric-value ${cpu<0?'blue':classify(cpu,60,80,false)}">${cpu>=0?numStr(cpu,1)+'<span class="metric-unit">%</span>':'N/A'}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Players</div>
+            <div id="mv-players" class="metric-value accent">${players}</div>
+          </div>
+        </div>
+      </div>
+      <div class="metric-group">
+        <div class="metric-group-title">Memory</div>
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-label">Heap %</div>
+            <div id="mv-heappct" class="metric-value ${classify(memPct,70,85,false)}">${memPct}<span class="metric-unit">%</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Used / Max</div>
+            <div id="mv-heapsz" class="metric-value" style="font-size:13px;letter-spacing:-.2px">${memUsed}<span class="metric-unit">/ ${memMax} MB</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">GC / Min</div>
+            <div id="mv-gcpermin" class="metric-value">${numStr(gcPerMin,1)}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Avg Pause</div>
+            <div id="mv-gcpause" class="metric-value">${numStr(gcPause,2)}<span class="metric-unit">ms</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="metric-group">
+        <div class="metric-group-title">Sampling</div>
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-label">Sample Int.</div>
+            <div class="metric-value">${sampleInt}<span class="metric-unit">ms</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Report Int.</div>
+            <div class="metric-value">${reportInt}<span class="metric-unit">s</span></div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Samples</div>
+            <div id="mv-samples" class="metric-value">${totSamples.toLocaleString()}</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Updated</div>
+            <div id="mv-updated" class="metric-value" style="font-size:12px;letter-spacing:0">${esc(freshness)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row ${a('slide-up')}" style="animation-delay:.05s">
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">TPS — 10s avg</span>
+          <div class="chart-panel-minmax">
+            <span>min <span id="mm-tps-min" class="mm-val">${tpsData.length ? Math.min(...tpsData).toFixed(1) : '—'}</span></span>
+            <span>avg <span id="mm-tps-avg" class="mm-val">${tpsData.length ? tpsStat.avg.toFixed(1) : '—'}</span></span>
+            <span>max <span id="mm-tps-max" class="mm-val">${tpsData.length ? Math.max(...tpsData).toFixed(1) : '—'}</span></span>
+          </div>
+        </div>
+        <div id="cv-tps" class="chart-panel-value" style="color:${tpsChartColor}">
+          ${numStr(tps,1)}<span class="cv-unit">tps</span>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="tpsChart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <span class="chart-panel-title">CPU Usage</span>
+          <div class="chart-panel-minmax">
+            <span>min <span id="mm-cpu-min" class="mm-val">${cpuData.length && cpu>=0 ? Math.min(...cpuData).toFixed(1)+'%' : '—'}</span></span>
+            <span>avg <span id="mm-cpu-avg" class="mm-val">${cpuData.length && cpu>=0 ? cpuStat.avg.toFixed(1)+'%' : '—'}</span></span>
+            <span>max <span id="mm-cpu-max" class="mm-val">${cpuData.length && cpu>=0 ? Math.max(...cpuData).toFixed(1)+'%' : '—'}</span></span>
+          </div>
+        </div>
+        <div id="cv-cpu" class="chart-panel-value" style="color:${cpuChartColor}">
+          ${cpu>=0?numStr(cpu,1):'N/A'}<span class="cv-unit">${cpu>=0?'%':''}</span>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="cpuChart"></canvas></div>
+      </div>
+    </div>`;
+
+        // Plugin summary table
+        if (pluginData && pluginData.plugins && pluginData.plugins.length) {
+            html += `<div class="card ${a('slide-up')}" style="animation-delay:.08s">
+      <div class="card-title">Top Plugins / Subsystems</div>
+      <div id="plugin-table-wrap">${buildPluginTableHTML(pluginData)}</div>
+    </div>`;
+        }
+
+        // Sample tree
+        html += `<div class="card ${a('slide-up')}" style="animation-delay:.11s">
+    <div class="card-title">Sample Tree</div>`;
+
+        if (hotTree && hotTree.plugins && hotTree.plugins.length) {
+            const fs = loadFilterState();
+            html += `<div class="tree-toolbar">
+      <input type="text" class="tree-search" id="treeFilter"
+        placeholder="Filter classes / methods…"
+        value="${esc(fs.q||'')}"
+        oninput="saveFilterState();filterTree()">
+      <label class="tree-check-label">
+        <input type="checkbox" id="hideJava" onchange="saveFilterState();renderHotTree(window.__hotTree)"
+          ${(fs.hj!==false)?'checked':''}>
+        Hide Server/JVM internals
+      </label>
+      <button class="tree-btn" onclick="collapseAll()">Collapse All</button>
+      <button class="tree-btn" onclick="expandAll()">Expand All</button>
+    </div>
+    <div class="tree-root" id="methodTree"></div>`;
+        } else if (topMethods.length) {
+            html += buildTopMethodsHTML(topMethods);
+        } else {
+            html += '<div style="color:var(--muted);font-size:11px;font-family:var(--mono);padding:16px 0">No plugin profiling data yet — waiting for next report.</div>';
+        }
+        html += '</div>';
+
+        // GC collectors
+        const gcCollectors = Array.isArray(detail.gc_collectors) ? detail.gc_collectors : [];
+        if (gcCollectors.length || detail.gc_collections !== undefined) {
+            html += `<div class="card ${a('slide-up')}" style="animation-delay:.14s">
+      <div class="card-title">Garbage Collection</div>`;
+            if (gcCollectors.length) {
+                html += `<table class="gc-table"><thead><tr>
+        <th>Collector</th><th>Collections</th><th>Total Time</th><th>Avg Time</th>
+      </tr></thead><tbody>`;
+                gcCollectors.forEach(c => {
+                    const count = num(c.collections,0), timeMs = num(c.collection_time_ms,0);
+                    const avg = count > 0 ? (timeMs/count).toFixed(1) : '0';
+                    html += `<tr>
+          <td>${esc(c.name)}</td>
+          <td>${count.toLocaleString()}</td>
+          <td>${timeMs.toLocaleString()}<span style="color:var(--muted)">ms</span></td>
+          <td>${avg}<span style="color:var(--muted)">ms</span></td>
+        </tr>`;
+                });
+                html += '</tbody></table>';
+            }
+            html += '</div>';
+        }
+
+        document.getElementById('app').innerHTML = html;
+
+        scheduleCharts(tpsData, cpuData, tpsChartColor, cpuChartColor, tpsClass, cpuClass);
+        window.__hotTree = hotTree;
+        if (hotTree) renderHotTree(hotTree);
+        filterTree();
+    }
+
+    // ── Build plugin table HTML (extracted so it can be reused for patching) ──
+    function buildPluginTableHTML(pluginData) {
+        let h = `<table class="plugin-table"><thead><tr>
+        <th>Name</th><th>CPU %</th><th>Samples</th><th>Impact</th>
+      </tr></thead><tbody>`;
+        pluginData.plugins.forEach(p => {
+            const isInfra = p.is_infrastructure;
+            const color = isInfra ? 'var(--blue)' : (p.percent>15?'var(--red)':p.percent>7?'var(--amber)':'var(--green)');
+            h += `<tr>
+        <td style="font-weight:600;color:var(--text)">${esc(p.name)}${isInfra?'&nbsp;<span style="color:var(--muted);font-size:9px">infra</span>':''}</td>
+        <td style="color:${color};font-weight:700">${numStr(p.percent,1)}</td>
+        <td>${num(p.samples,0).toLocaleString()}</td>
+        <td><div class="impact-bar"><div class="impact-bar-fill" style="width:${Math.min(num(p.percent,0)*3,100)}%;background:${color}"></div></div></td>
+      </tr>`;
+        });
+        return h + '</tbody></table>';
+    }
+
+    function buildTopMethodsHTML(topMethods) {
+        let h = `<table class="plugin-table"><thead><tr>
+      <th>Method</th><th>Samples</th><th>%</th><th>Impact</th>
+    </tr></thead><tbody>`;
+        topMethods.forEach(m => {
+            const pct = num(m.percent!==undefined?m.percent:m.percentage, 0);
+            const color = pct>10?'var(--red)':pct>5?'var(--amber)':'var(--accent)';
+            h += `<tr>
+        <td style="font-family:var(--mono);font-size:10px">${esc(m.method||m.name||'?')}</td>
+        <td>${num(m.count||m.samples,0)}</td>
+        <td style="color:${color};font-weight:700">${numStr(pct,1)}</td>
+        <td><div class="impact-bar"><div class="impact-bar-fill" style="width:${Math.min(pct*3,100)}%;background:${color}"></div></div></td>
+      </tr>`;
+        });
+        return h + '</tbody></table>';
+    }
+
+    // ── Patch plugin table in-place (only rebuilds tbody, not the whole card) ──
+    function patchPluginTable(detail) {
+        const wrap = document.getElementById('plugin-table-wrap');
+        if (!wrap) return;
+        const pluginData = detail.hot_method_tree;
+        if (pluginData && pluginData.plugins && pluginData.plugins.length) {
+            wrap.innerHTML = buildPluginTableHTML(pluginData);
+        }
+    }
+
+    // ── Patch hot tree in-place: only rebuild the methodTree div content ──
+    function patchHotTree(hotTree) {
+        window.__hotTree = hotTree;
+        if (!hotTree) return;
+        // Re-render tree content inside existing card — toolbar is preserved
+        renderHotTree(hotTree);
+        filterTree();
+    }
+
+    // ── Schedule chart redraws after paint ──
+    function scheduleCharts(tpsData, cpuData, tpsChartColor, cpuChartColor, tpsClass, cpuClass) {
+        const css = getComputedStyle(document.documentElement);
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                const accentColor = css.getPropertyValue('--accent').trim() || '#34d399';
+                const blueColor   = css.getPropertyValue('--blue').trim()   || '#2dd4bf';
+
+                const tpsColor = tpsChartColor.startsWith('var')
+                    ? (tpsClass==='good' ? accentColor
+                        : tpsClass==='warn'  ? (css.getPropertyValue('--amber').trim()||'#f59e0b')
+                            :                      (css.getPropertyValue('--red').trim()  ||'#ef4444'))
+                    : tpsChartColor;
+                const cpuColor = cpuChartColor.startsWith('var')
+                    ? (cpuClass==='good' ? accentColor
+                        : cpuClass==='warn'  ? (css.getPropertyValue('--amber').trim()||'#f59e0b')
+                            : cpuClass==='blue'  ? blueColor
+                                :                      (css.getPropertyValue('--red').trim()  ||'#ef4444'))
+                    : cpuChartColor;
+
+                drawSparkline('tpsChart', tpsData, {
+                    color:    tpsColor,
+                    max:      20,
+                    yLabels:  [20, 10, 0],
+                    unit:     'tps',
+                    warnLine: 15,
+                });
+                drawSparkline('cpuChart', cpuData, {
+                    color:      cpuColor,
+                    max:        100,
+                    yLabels:    [100, 50, 0],
+                    unit:       '%',
+                    warnLine:   80,
+                });
+            }, 30);
+        });
+    }
+
+    // ── Navigation helpers ──
+    function openServerByEncoded(v, label) {
+        selectedServer      = decodeURIComponent(v);
+        selectedServerLabel = label ? decodeURIComponent(label) : selectedServer;
+        detailShellServer   = null; // force full shell rebuild for the new server
+        viewMode = 'detail';
+        render();
+    }
+    function backToServers() {
+        viewMode = 'list';
+        selectedServerLabel = null;
+        detailShellServer = null;
+        render();
+    }
+    async function extendServerByEncoded(v, btn) {
+        const name = decodeURIComponent(v);
+        if (btn) { btn.disabled = true; btn.textContent = 'Deploying…'; }
+        try {
+            await api('extend/' + encodeURIComponent(name), { method: 'POST' });
+            if (btn) btn.textContent = 'Deployed';
+            setTimeout(render, 1200);
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.textContent = 'Failed'; }
+            alert(e.error || 'Failed to deploy profiler extender');
+        }
+    }
+    async function unextendServerByEncoded(v, btn) {
+        const name = decodeURIComponent(v);
+        if (!confirm('Remove profiler extender from this backend server?')) return;
+        if (btn) { btn.disabled = true; btn.textContent = 'Removing…'; }
+        try {
+            await api('unextend/' + encodeURIComponent(name), { method: 'POST' });
+            if (btn) btn.textContent = 'Removed';
+            setTimeout(render, 1200);
+        } catch (e) {
+            if (btn) { btn.disabled = false; btn.textContent = 'Failed'; }
+            alert(e.error || 'Failed to remove profiler extender');
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    //  SPARKLINE — bezier curve, clean fill, y-axis, value dot
+    // ═══════════════════════════════════════════
+    function drawSparkline(id, data, opts = {}) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+
+        // Resolve actual rendered width — fall back to parent or a safe default
+        let w = canvas.offsetWidth || canvas.parentElement?.offsetWidth || canvas.parentElement?.clientWidth || 300;
+        if (w < 10) w = 300; // last-resort fallback
+
+        const h   = 80;
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width  = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width  = w + 'px';
+        canvas.style.height = h + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, w, h);
+
+        const css = getComputedStyle(document.documentElement);
+
+        // If fewer than 2 points, draw a flat empty state
+        if (!data || data.length < 2) {
+            const borderClr = css.getPropertyValue('--border').trim() || 'rgba(80,110,150,.22)';
+            ctx.strokeStyle = borderClr;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.4;
+            ctx.setLineDash([3, 5]);
+            ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+
+            if (data && data.length === 1) {
+                // Single point — draw endpoint dot
+                const color = opts.color || '#34d399';
+                ctx.beginPath(); ctx.arc(w * 0.98, h/2, 3, 0, Math.PI*2);
+                ctx.fillStyle = color; ctx.fill();
+            }
+            return;
+        }
+
+        let maxV = Math.max(...data, 1);
+        if (opts.max) maxV = Math.max(maxV, opts.max);
+        const ceiling = maxV * 1.08;
+
+        // Leave left padding for y-axis labels
+        const padL = 26;
+        const padR = 8;
+        const padT = 8;
+        const padB = 4;
+        const gw = w - padL - padR;
+        const gh = h - padT - padB;
+
+        const lineColor = opts.color || '#34d399';
+        const mutedClr  = css.getPropertyValue('--muted').trim()  || '#30604a';
+        const borderClr = css.getPropertyValue('--border').trim() || 'rgba(80,110,150,.22)';
+        const redClr    = css.getPropertyValue('--red').trim()    || '#ef4444';
+        const amberClr  = css.getPropertyValue('--amber').trim()  || '#f59e0b';
+
+        function px(i) { return padL + (i / (data.length - 1)) * gw; }
+        function py(v) { return padT + gh * (1 - Math.min(v, ceiling) / ceiling); }
+
+        // ── Y-axis labels ──
+        if (opts.yLabels && opts.yLabels.length) {
+            ctx.font = `${8 * dpr / dpr}px "IBM Plex Mono", monospace`;
+            ctx.fillStyle = mutedClr;
+            ctx.globalAlpha = 0.8;
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            opts.yLabels.forEach(lv => {
+                const ly = py(lv);
+                if (ly < padT - 2 || ly > h - padB + 2) return;
+                ctx.fillText(String(lv), padL - 4, ly);
+            });
+            ctx.globalAlpha = 1;
+            ctx.textAlign = 'left';
+        }
+
+        // ── Grid lines (aligned to yLabels) ──
+        const gridVals = opts.yLabels || [ceiling * 0.25, ceiling * 0.5, ceiling * 0.75];
+        ctx.strokeStyle = borderClr;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        ctx.setLineDash([2, 4]);
+        gridVals.forEach(gv => {
+            const ly = py(gv);
+            if (ly < padT - 2 || ly > h - padB + 2) return;
+            ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(padL + gw, ly); ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        // ── Warn / danger threshold lines ──
+        function drawThreshLine(val, color) {
+            const ty = py(val);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.35;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(padL, ty); ctx.lineTo(padL + gw, ty); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+        }
+        if (opts.warnLine   != null) drawThreshLine(opts.warnLine,   amberClr);
+        if (opts.dangerLine != null) drawThreshLine(opts.dangerLine,  redClr);
+
+        // ── Build bezier path ──
+        function buildPath() {
+            ctx.beginPath();
+            ctx.moveTo(px(0), py(data[0]));
+            for (let i = 1; i < data.length; i++) {
+                const x0 = px(i-1), y0 = py(data[i-1]);
+                const x1 = px(i),   y1 = py(data[i]);
+                const cpx = (x0 + x1) / 2;
+                ctx.bezierCurveTo(cpx, y0, cpx, y1, x1, y1);
+            }
+        }
+
+        // ── Fill ──
+        buildPath();
+        ctx.lineTo(px(data.length - 1), h - padB);
+        ctx.lineTo(px(0), h - padB);
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(0, padT, 0, h);
+        grad.addColorStop(0,   hexAlpha(lineColor, 0.25));
+        grad.addColorStop(0.55, hexAlpha(lineColor, 0.07));
+        grad.addColorStop(1,   hexAlpha(lineColor, 0.0));
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // ── Stroke ──
+        buildPath();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth   = 1.5;
+        ctx.lineJoin    = 'round';
+        ctx.lineCap     = 'round';
+        ctx.stroke();
+
+        // ── Endpoint dot (latest value) ──
+        const ex = px(data.length - 1);
+        const ey = py(data[data.length - 1]);
+
+        // Outer glow ring
+        ctx.beginPath();
+        ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+        ctx.fillStyle = hexAlpha(lineColor, 0.18);
+        ctx.fill();
+
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = lineColor;
+        ctx.fill();
+    }
+
+    function hexAlpha(hex, alpha) {
+        if (!hex || !hex.startsWith('#')) return hex;
+        const h = hex.replace('#','');
+        const r = parseInt(h.length===3?h[0]+h[0]:h.slice(0,2),16);
+        const g = parseInt(h.length===3?h[1]+h[1]:h.slice(2,4),16);
+        const b = parseInt(h.length===3?h[2]+h[2]:h.slice(4,6),16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // ═══════════════════════════════════════════
+    //  SAMPLE TREE
+    // ═══════════════════════════════════════════
+    function renderHotTree(hotTree) {
+        const el = document.getElementById('methodTree');
+        if (!el || !hotTree || !hotTree.plugins) return;
+        const plugins = hotTree.plugins;
+
+        let maxSamples = 0;
+        plugins.forEach(p => maxSamples += p.samples);
+        totalSamples = maxSamples || 1;
+
+        const hideJava = document.getElementById('hideJava')?.checked ?? true;
+
+        let html = '';
+        plugins.forEach(p => {
+            if (hideJava && p.is_infrastructure) return;
+            html += renderPluginBlock(p);
+        });
+        el.innerHTML = html || '<div style="color:var(--muted);font-size:11px;font-family:var(--mono);padding:10px">No matching subsystems.</div>';
+    }
+
+    function pctColor(pct, isInfra) {
+        if (isInfra) return 'var(--blue)';
+        if (pct > 20) return 'var(--red)';
+        if (pct > 8)  return 'var(--amber)';
+        return 'var(--accent)';
+    }
+
+    function arrowSvg() {
+        return '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
+    }
+
+    function renderPluginBlock(p) {
+        const id   = 'plug_' + p.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const pct  = (p.samples / totalSamples) * 100;
+        const color = pctColor(pct, p.is_infrastructure);
+        const isOpen = openNodes.has(id);
+        const hasChildren = p.classes && p.classes.length;
+
+        let html = `<div class="t-block level-0" data-id="${esc(id)}">`;
+        html += `<div class="t-row" onclick="${hasChildren?`toggleNode('${id}')`:''}"
+    data-name="${esc(p.name.toLowerCase())}">
+    <div class="t-indent">
+      <span class="t-arrow${isOpen?' open':''}${!hasChildren?' hidden':''}" id="arr_${id}">${arrowSvg()}</span>
+    </div>
+    <div class="t-name"><span class="plg">${esc(p.name)}</span>${p.is_infrastructure?'&nbsp;<span style="font-size:9px;color:var(--muted);font-weight:400">infra</span>':''}</div>
+    <div class="t-bar-wrap"><div class="t-bar"><div class="t-bar-fill" style="width:${Math.min(pct*2.5,100)}%;background:${color}"></div></div></div>
+    <div class="t-pct" style="color:${color}">${pct.toFixed(1)}%</div>
+    <div class="t-samples">${p.samples.toLocaleString()}</div>
+  </div>`;
+
+        if (hasChildren) {
+            html += `<div class="t-children${isOpen?'':' collapsed'}" id="ch_${id}" style="padding-left:14px">`;
+            p.classes.forEach(c => { html += renderClassBlock(c, p.name); });
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderClassBlock(c, pluginName) {
+        const id    = 'cls_' + (pluginName+'_'+c.name).replace(/[^a-zA-Z0-9]/g, '_');
+        const pct   = (c.samples / totalSamples) * 100;
+        const color = pct > 8 ? 'var(--amber)' : 'var(--dim)';
+        const isOpen = openNodes.has(id);
+        const hasChildren = c.methods && c.methods.length;
+
+        const lastDot = c.name.lastIndexOf('.');
+        const pkg = lastDot >= 0 ? c.name.substring(0, lastDot) : '';
+        const cls = lastDot >= 0 ? c.name.substring(lastDot+1) : c.name;
+
+        let html = `<div class="t-block level-1" data-id="${esc(id)}">`;
+        html += `<div class="t-row" onclick="${hasChildren?`toggleNode('${id}')`:''}"
+    data-name="${esc(c.name.toLowerCase())}">
+    <div class="t-indent">
+      <span class="t-arrow${isOpen?' open':''}${!hasChildren?' hidden':''}" id="arr_${id}">${arrowSvg()}</span>
+    </div>
+    <div class="t-name">${pkg?`<span class="pkg">${esc(pkg)}.</span>`:''}<span class="cls">${esc(cls)}</span></div>
+    <div class="t-bar-wrap"><div class="t-bar"><div class="t-bar-fill" style="width:${Math.min(pct*2.5,100)}%;background:${color}"></div></div></div>
+    <div class="t-pct" style="color:var(--dim)">${pct.toFixed(1)}%</div>
+    <div class="t-samples">${c.samples.toLocaleString()}</div>
+  </div>`;
+
+        if (hasChildren) {
+            html += `<div class="t-children${isOpen?'':' collapsed'}" id="ch_${id}" style="padding-left:14px">`;
+            c.methods.forEach(m => { html += renderMethodRow(m); });
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderMethodRow(m) {
+        const pct   = (m.samples / totalSamples) * 100;
+        const color = pct > 5 ? 'var(--accent)' : 'var(--muted)';
+        return `<div class="t-block level-2" data-name="${esc((m.full_name||m.name||'').toLowerCase())}">
+    <div class="t-row leaf">
+      <div class="t-indent"><span class="t-arrow hidden">${arrowSvg()}</span></div>
+      <div class="t-name"><span class="mtd">${esc(m.name)}()</span></div>
+      <div class="t-bar-wrap"><div class="t-bar"><div class="t-bar-fill" style="width:${Math.min(pct*2.5,100)}%;background:${color}"></div></div></div>
+      <div class="t-pct" style="color:${color}">${pct.toFixed(1)}%</div>
+      <div class="t-samples">${m.samples.toLocaleString()}</div>
+    </div>
+  </div>`;
+    }
+
+    function toggleNode(id) {
+        const ch  = document.getElementById('ch_' + id);
+        const arr = document.getElementById('arr_' + id);
+        if (!ch) return;
+        ch.classList.toggle('collapsed');
+        const collapsed = ch.classList.contains('collapsed');
+        if (arr) arr.classList.toggle('open', !collapsed);
+        if (collapsed) openNodes.delete(id);
+        else openNodes.add(id);
+    }
+
+    function collapseAll() {
+        document.querySelectorAll('.t-children').forEach(el => el.classList.add('collapsed'));
+        document.querySelectorAll('.t-arrow').forEach(el => el.classList.remove('open'));
+        openNodes.clear();
+    }
+
+    function expandAll() {
+        document.querySelectorAll('.t-children').forEach(el => {
+            el.classList.remove('collapsed');
+            openNodes.add(el.id.replace('ch_',''));
+        });
+        document.querySelectorAll('.t-arrow:not(.hidden)').forEach(el => el.classList.add('open'));
+    }
+
+    function filterTree() {
+        const q = (document.getElementById('treeFilter')?.value || '').toLowerCase().trim();
+        if (!q) {
+            document.querySelectorAll('.t-block, .t-row').forEach(el => { el.style.display = ''; });
+            return;
+        }
+        const allBlocks = document.querySelectorAll('#methodTree .t-block');
+        allBlocks.forEach(block => {
+            const name = (block.dataset.name || block.querySelector('[data-name]')?.dataset.name || '').toLowerCase();
+            const anyMatch = !!block.querySelector('[data-name*="' + q.replace(/"/g, '') + '"]') || name.includes(q);
+            block.style.display = anyMatch ? '' : 'none';
+        });
+    }
+
+    // ── Boot ──
+    setTimeout(render, 80);
+    setInterval(render, 10000);
 </script>
 </body>
 </html>

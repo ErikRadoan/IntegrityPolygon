@@ -1,87 +1,100 @@
 package dev.erikradovan.integritypolygon.web.auth;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.JWTVerifier;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import dev.erikradovan.integritypolygon.config.ConfigManager;
 
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * JWT-based authentication manager for the web panel.
- * Generates and validates tokens. The signing secret is persisted in config.
+ * Session-based authentication manager for the web panel.
+ * Creates, validates, and invalidates short-lived server-side sessions.
  */
 public class AuthManager {
 
-    private static final String ISSUER = "IntegrityPolygon";
-    private static final long TOKEN_EXPIRY_HOURS = 24;
+    private static final long SESSION_EXPIRY_HOURS = 24;
 
-    private final Algorithm algorithm;
-    private final JWTVerifier verifier;
-    private final ConfigManager configManager;
+    private final Map<String, SessionRecord> sessions = new ConcurrentHashMap<>();
+    private final SecureRandom random = new SecureRandom();
 
     public AuthManager(ConfigManager configManager) {
-        this.configManager = configManager;
-
-        String secret = getOrCreateSecret();
-        this.algorithm = Algorithm.HMAC256(secret);
-        this.verifier = JWT.require(algorithm)
-                .withIssuer(ISSUER)
-                .build();
+        // Config currently unused for session auth but constructor is kept stable.
     }
 
     /**
-     * Generate a JWT token for a username.
+     * Create a new session ID for a username + role.
      */
-    public String generateToken(String username) {
-        return JWT.create()
-                .withIssuer(ISSUER)
-                .withSubject(username)
-                .withIssuedAt(Instant.now())
-                .withExpiresAt(Instant.now().plus(TOKEN_EXPIRY_HOURS, ChronoUnit.HOURS))
-                .sign(algorithm);
+    public String createSession(String username, String role) {
+        cleanupExpired();
+        String sessionId = generateSessionId();
+        Instant expiresAt = Instant.now().plus(SESSION_EXPIRY_HOURS, ChronoUnit.HOURS);
+        sessions.put(sessionId, new SessionRecord(username, normalizeRole(role), expiresAt));
+        return sessionId;
     }
 
     /**
-     * Validate a JWT token and return the decoded claims.
+     * Validate a session ID and return session metadata.
      */
-    public Optional<DecodedJWT> validateToken(String token) {
-        try {
-            DecodedJWT decoded = verifier.verify(token);
-            return Optional.of(decoded);
-        } catch (JWTVerificationException e) {
+    public Optional<SessionRecord> validateSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
             return Optional.empty();
         }
-    }
 
-    /**
-     * Extract the username from a valid token.
-     */
-    public Optional<String> getUsername(String token) {
-        return validateToken(token).map(DecodedJWT::getSubject);
-    }
-
-    private String getOrCreateSecret() {
-        Optional<String> existing = configManager.getValue("web.jwt_secret");
-        if (existing.isPresent() && !existing.get().isEmpty()) {
-            return existing.get();
+        SessionRecord session = sessions.get(sessionId);
+        if (session == null) {
+            return Optional.empty();
         }
+        if (session.expiresAt().isBefore(Instant.now())) {
+            sessions.remove(sessionId);
+            return Optional.empty();
+        }
+        return Optional.of(session);
+    }
 
-        // Generate a new random secret
-        byte[] secretBytes = new byte[32];
-        new SecureRandom().nextBytes(secretBytes);
-        String secret = Base64.getEncoder().encodeToString(secretBytes);
+    public void invalidateSession(String sessionId) {
+        if (sessionId != null) {
+            sessions.remove(sessionId);
+        }
+    }
 
-        configManager.setValue("web.jwt_secret", secret);
-        configManager.save();
+    public void invalidateUserSessions(String username) {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+        sessions.entrySet().removeIf(e -> username.equalsIgnoreCase(e.getValue().username()));
+    }
 
-        return secret;
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "admin";
+        }
+        return role;
+    }
+
+    private String generateSessionId() {
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private void cleanupExpired() {
+        Instant now = Instant.now();
+        sessions.entrySet().removeIf(e -> e.getValue().expiresAt().isBefore(now));
+    }
+
+    public record SessionRecord(String username, String role, Instant expiresAt) {
+        public SessionRecord {
+            if (username == null || username.isBlank()) {
+                throw new IllegalArgumentException("username cannot be blank");
+            }
+            if (role == null || role.isBlank()) {
+                role = "admin";
+            }
+        }
     }
 }
 

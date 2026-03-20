@@ -258,13 +258,7 @@ public class ModuleDashboardImpl implements ModuleDashboard {
 
             @Override
             public String authenticatedUser() {
-                String auth = ctx.header("Authorization");
-                if (auth != null && auth.startsWith("Bearer ")) {
-                    // The auth middleware already validated the token, so
-                    // we just extract the subject. This is a simplified approach.
-                    return auth.substring(7); // The caller can decode if needed
-                }
-                return null;
+                return ctx.attribute("auth.username");
             }
 
             @Override

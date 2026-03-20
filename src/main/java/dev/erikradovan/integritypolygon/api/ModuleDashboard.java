@@ -13,7 +13,7 @@ import java.util.Map;
  *
  * <p>Modules register custom REST API endpoints that their dashboard JS calls.
  * These are mounted under {@code /api/modules/{moduleId}/} and are automatically
- * protected by the framework's JWT auth middleware.
+ * protected by the framework's session auth middleware.
  *
  * <p>Example in a module's {@code onEnable}:
  * <pre>{@code
@@ -100,7 +100,7 @@ public interface ModuleDashboard {
         /** @return a query parameter value with a default */
         String queryParam(String name, String defaultValue);
 
-        /** @return the Authorization header's JWT subject (username), or null */
+        /** @return authenticated username from the active panel session, or null */
         String authenticatedUser();
 
         /** Set the response status code */

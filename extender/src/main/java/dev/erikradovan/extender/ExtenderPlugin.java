@@ -122,11 +122,9 @@ public class ExtenderPlugin extends JavaPlugin implements Listener {
             cfgLabel = getConfig().getString("extender-id", "").trim();
         }
         if (cfgLabel.isEmpty()) {
-            // Use hostname:port as default label (getServer().getName() returns
-            // "CraftBukkit")
             String host = "localhost";
             try {
-                host = java.net.InetAddress.getLocalHost().getHostName();
+                host = getServer().getName();
             } catch (Exception ignored) {
             }
             cfgLabel = host + ":" + getServer().getPort();

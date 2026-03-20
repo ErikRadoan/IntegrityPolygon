@@ -1,0 +1,14 @@
+<svg width="100%" viewBox="0 0 116 86" xmlns="http://www.w3.org/2000/svg">
+  <!-- Back purple cube (shifted +30 on x) -->
+  <polygon points="86,0 114,14 86,28 58,14"  fill="#AFA9EC" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="114,14 114,50 86,64 86,28" fill="#3C3489" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="86,28 86,64 58,50 58,14"  fill="#534AB7" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Front purple cube -->
+  <polygon points="86,28 114,42 86,56 58,42" fill="#AFA9EC" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="114,42 114,70 86,84 86,56" fill="#3C3489" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="86,56 86,84 58,70 58,42"  fill="#534AB7" stroke="#26215C" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Green cube -->
+  <polygon points="30,28 58,42 30,56 2,42"   fill="#5DCAA5" stroke="#04342C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="58,42 58,70 30,84 30,56"  fill="#2FB387" stroke="#04342C" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="30,56 30,84 2,70 2,42"    fill="#1D9E75" stroke="#04342C" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

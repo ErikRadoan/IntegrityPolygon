@@ -4,8 +4,6 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.core.ExtenderServiceImpl;
 import dev.erikradovan.integritypolygon.core.LoadedModule;
-import dev.erikradovan.integritypolygon.core.MetricsBuffer;
-import dev.erikradovan.integritypolygon.core.MetricsServiceImpl;
 import dev.erikradovan.integritypolygon.core.ModuleManager;
 import dev.erikradovan.integritypolygon.logging.LogManager;
 import dev.erikradovan.integritypolygon.web.auth.AuthManager;
@@ -38,12 +36,14 @@ public class WebServer {
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/setup/status",
             "/api/auth/login",
-            "/metrics"
+            "/api/auth/logout"
     );
 
-    /** Paths that require a valid JWT but are allowed even before setup is completed. */
+    /** Paths that require auth but are allowed even before setup is completed. */
     private static final Set<String> PRE_SETUP_PATHS = Set.of(
             "/api/auth/change-password",
+            "/api/auth/me",
+            "/api/auth/account",
             "/api/setup",
             "/api/health"
     );
@@ -54,19 +54,16 @@ public class WebServer {
     private final RealtimeHandler realtimeHandler;
     private final ModuleManager moduleManager;
     private final StatusRoutes statusRoutes;
-    private final MetricsServiceImpl metricsService;
     private final Logger logger;
     private final Path dataDirectory;
 
     public WebServer(ConfigManager configManager, ModuleManager moduleManager,
                      LogManager logManager, ProxyServer proxy, Logger logger,
-                     MetricsServiceImpl metricsService, MetricsBuffer metricsBuffer,
                      Path dataDirectory) {
         this.configManager = configManager;
         this.moduleManager = moduleManager;
         this.logger = logger;
         this.authManager = new AuthManager(configManager);
-        this.metricsService = metricsService;
         this.dataDirectory = dataDirectory;
 
         // Suppress noisy Javalin/Jetty startup logs
@@ -77,68 +74,61 @@ public class WebServer {
         ConfigRoutes configRoutes = new ConfigRoutes(configManager);
         StatusRoutes statusRoutes = new StatusRoutes(proxy);
         this.statusRoutes = statusRoutes;
-        MonitoringRoutes monitoringRoutes = new MonitoringRoutes(metricsBuffer, logManager);
         RepositoryRoutes repoRoutes = new RepositoryRoutes(configManager, moduleManager, logger);
-        UserRoutes userRoutes = new UserRoutes(configManager);
+        UserRoutes userRoutes = new UserRoutes(configManager, authManager);
         this.realtimeHandler = new RealtimeHandler(authManager, logManager, logger);
 
         this.app = Javalin.create(config -> {
-            config.plugins.enableCors(cors -> cors.add(rule -> rule.anyHost()));
             config.staticFiles.add("/panel", Location.CLASSPATH);
             config.showJavalinBanner = false;
+            config.jsonMapper(new GsonJsonMapper());
 
-            // Configure Jetty with both HTTP and HTTPS connectors
+            // Configure Jetty with HTTPS connector only
             config.jetty.server(() -> {
                 Server server = new Server();
                 int port = configManager.getWebPort();
                 String bind = configManager.getWebBind();
 
-                // Always add HTTP connector
-                ServerConnector httpConnector = new ServerConnector(server);
-                httpConnector.setHost(bind);
-                httpConnector.setPort(port);
-
-                // Try to set up HTTPS on the same port + 1, or as the primary connector
                 SslCertificateManager sslMgr = new SslCertificateManager(dataDirectory, logger);
                 Path keystorePath = sslMgr.ensureKeystore();
-
-                if (keystorePath != null) {
-                    try {
-                        SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-                        sslContextFactory.setKeyStorePath(keystorePath.toAbsolutePath().toString());
-                        sslContextFactory.setKeyStorePassword(sslMgr.getKeystorePassword());
-                        sslContextFactory.setKeyManagerPassword(sslMgr.getKeystorePassword());
-                        sslContextFactory.setSniRequired(false);
-
-                        HttpConfiguration httpsConfig = new HttpConfiguration();
-                        httpsConfig.setSecureScheme("https");
-                        httpsConfig.setSecurePort(port);
-                        httpsConfig.addCustomizer(new SecureRequestCustomizer(false));
-
-                        ServerConnector httpsConnector = new ServerConnector(server,
-                                new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                                new HttpConnectionFactory(httpsConfig));
-                        httpsConnector.setHost(bind);
-                        httpsConnector.setPort(port);
-
-                        // Use HTTPS as the only connector on the configured port
-                        server.setConnectors(new Connector[]{httpsConnector});
-                        logger.info("SSL enabled — web panel will serve HTTPS on port {}", port);
-                    } catch (Exception e) {
-                        logger.warn("SSL setup failed, falling back to HTTP: {}", e.getMessage());
-                        server.setConnectors(new Connector[]{httpConnector});
-                    }
-                } else {
-                    server.setConnectors(new Connector[]{httpConnector});
+                if (keystorePath == null) {
+                    throw new RuntimeException("HTTPS keystore setup failed; refusing to start without TLS");
                 }
+
+                SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
+                sslContextFactory.setKeyStorePath(keystorePath.toAbsolutePath().toString());
+                sslContextFactory.setKeyStorePassword(sslMgr.getKeystorePassword());
+                sslContextFactory.setKeyManagerPassword(sslMgr.getKeystorePassword());
+                sslContextFactory.setSniRequired(false);
+
+                HttpConfiguration httpsConfig = new HttpConfiguration();
+                httpsConfig.setSecureScheme("https");
+                httpsConfig.setSecurePort(port);
+                httpsConfig.addCustomizer(new SecureRequestCustomizer(false));
+
+                ServerConnector httpsConnector = new ServerConnector(server,
+                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                        new HttpConnectionFactory(httpsConfig));
+                httpsConnector.setHost(bind);
+                httpsConnector.setPort(port);
+                server.setConnectors(new Connector[]{httpsConnector});
 
                 return server;
             });
         });
 
+        // Centralized logging for uncaught route/middleware errors.
+        app.exception(Exception.class, (e, ctx) -> {
+            logger.error("Web request failed: method={} path={} origin={} host={}",
+                    ctx.req().getMethod(), ctx.path(), ctx.header("Origin"), ctx.host(), e);
+            if (!ctx.res().isCommitted()) {
+                ctx.status(500).json(Map.of("error", "Internal server error", "path", ctx.path()));
+            }
+        });
+
         registerAuthMiddleware();
         registerPublicRoutes(setupWizard);
-        registerProtectedRoutes(moduleRoutes, configRoutes, statusRoutes, monitoringRoutes, repoRoutes, userRoutes);
+        registerProtectedRoutes(moduleRoutes, configRoutes, statusRoutes, repoRoutes, userRoutes);
         registerDashboardManifest();
         registerWebSocket();
 
@@ -150,6 +140,8 @@ public class WebServer {
     }
 
     private void registerAuthMiddleware() {
+        app.before(ctx -> ctx.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains"));
+
         // Auth for API routes
         app.before("/api/*", ctx -> {
             String path = ctx.path();
@@ -159,18 +151,21 @@ public class WebServer {
                 return;
             }
 
-            // Pre-setup paths require a valid JWT but NOT completed setup
+            // Pre-setup paths require auth but NOT completed setup
             if (PRE_SETUP_PATHS.contains(path)) {
                 requireValidToken(ctx);
+                requireSameOriginForMutatingRequests(ctx);
                 return;
             }
 
-            // Everything else requires completed setup + valid JWT
+            // Everything else requires completed setup + auth
             if (!configManager.isSetupCompleted()) {
                 throw new HttpResponseException(503, "Setup not completed");
             }
 
             requireValidToken(ctx);
+            requireSameOriginForMutatingRequests(ctx);
+            enforceRolePolicy(ctx, path);
         });
 
         // Auth for module dashboard static files (they may contain sensitive config UIs)
@@ -179,52 +174,112 @@ public class WebServer {
                 throw new HttpResponseException(503, "Setup not completed");
             }
 
-            String authHeader = ctx.header("Authorization");
-            // Allow cookie-based auth for static files loaded by the browser
-            String tokenParam = ctx.queryParam("token");
-            String token = null;
-
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                token = authHeader.substring(7);
-            } else if (tokenParam != null) {
-                token = tokenParam;
-            }
-
-            if (token == null || authManager.validateToken(token).isEmpty()) {
+            String token = ctx.cookie("ip_auth");
+            if (token == null || authManager.validateSession(token).isEmpty()) {
                 throw new HttpResponseException(401, "Unauthorized");
             }
+            // HTTPS-only deployment should always advertise HSTS.
+            ctx.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
         });
     }
 
-    private void requireValidToken(io.javalin.http.Context ctx) {
-        String authHeader = ctx.header("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new HttpResponseException(401, "Missing or invalid Authorization header");
+    private AuthManager.SessionRecord requireValidToken(io.javalin.http.Context ctx) {
+        String token = ctx.cookie("ip_auth");
+        if (token == null || token.isBlank()) {
+            throw new HttpResponseException(401, "Missing auth session");
         }
-        String token = authHeader.substring(7);
-        if (authManager.validateToken(token).isEmpty()) {
+        Optional<AuthManager.SessionRecord> decoded = authManager.validateSession(token);
+        if (decoded.isEmpty()) {
             throw new HttpResponseException(401, "Invalid or expired token");
         }
+        AuthManager.SessionRecord session = decoded.get();
+        ctx.attribute("auth.username", session.username());
+        ctx.attribute("auth.role", session.role());
+        return session;
+    }
+
+    private void requireRole(io.javalin.http.Context ctx, String... allowedRoles) {
+        String role = ctx.attribute("auth.role");
+        if (role == null) {
+            throw new HttpResponseException(401, "Unauthorized");
+        }
+        for (String allowed : allowedRoles) {
+            if (allowed.equalsIgnoreCase(role)) {
+                return;
+            }
+        }
+        throw new HttpResponseException(403, "Forbidden");
+    }
+
+    private void requireSameOriginForMutatingRequests(io.javalin.http.Context ctx) {
+        String method = ctx.req().getMethod();
+        if (!("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method) || "DELETE".equals(method))) {
+            return;
+        }
+
+        String expectedOrigin = ctx.scheme() + "://" + ctx.host();
+        String origin = ctx.header("Origin");
+        if (origin == null || !origin.equalsIgnoreCase(expectedOrigin)) {
+            logger.warn("Blocked cross-origin mutating request: method={} path={} origin={} expected={}",
+                    method, ctx.path(), origin, expectedOrigin);
+            throw new HttpResponseException(403, "Cross-origin request blocked");
+        }
+    }
+
+    private void enforceRolePolicy(io.javalin.http.Context ctx, String path) {
+        String role = ctx.attribute("auth.role");
+        if ("admin".equalsIgnoreCase(role)) {
+            return;
+        }
+
+        boolean moderatorAllowed = path.equals("/api/health")
+                || path.equals("/api/status")
+                || path.equals("/api/dashboards")
+                || path.startsWith("/api/modules/");
+
+        if ("moderator".equalsIgnoreCase(role) && moderatorAllowed && !isModuleManagementPath(path)) {
+            return;
+        }
+
+        throw new HttpResponseException(403, "Forbidden");
+    }
+
+    private boolean isModuleManagementPath(String path) {
+        if ("/api/modules".equals(path)) {
+            return true;
+        }
+        String[] parts = path.split("/");
+        if (parts.length != 5) {
+            return false;
+        }
+        if (!"api".equals(parts[1]) || !"modules".equals(parts[2])) {
+            return false;
+        }
+        return Set.of("load", "unload", "reload", "enable", "disable").contains(parts[4]);
     }
 
     private void registerPublicRoutes(SetupWizard setupWizard) {
         app.get("/api/health", ctx -> ctx.json(Map.of("status", "ok", "version", "2.0.0")));
-        app.get("/api/setup/status", setupWizard::handleSetupStatus);
-        app.post("/api/auth/login", setupWizard::handleLogin);
-
-        // Prometheus metrics endpoint (unauthenticated for scraper access)
-        app.get("/metrics", ctx -> {
-            ctx.contentType("text/plain; version=0.0.4; charset=utf-8");
-            ctx.result(metricsService.scrape());
+        app.get("/api/setup/status", ctx -> {
+            try {
+                setupWizard.handleSetupStatus(ctx);
+            } catch (Exception e) {
+                logger.error("Failed to serve /api/setup/status", e);
+                throw e;
+            }
         });
+        app.post("/api/auth/login", setupWizard::handleLogin);
+        app.post("/api/auth/logout", setupWizard::handleLogout);
+        app.get("/api/auth/me", setupWizard::handleMe);
+        app.patch("/api/auth/account", setupWizard::handleRenameAccount);
 
-        // These require a valid JWT but are allowed before setup is completed
+        // These require auth but are allowed before setup is completed
         app.post("/api/auth/change-password", setupWizard::handleChangePassword);
         app.post("/api/setup", setupWizard::handleSetup);
     }
 
     private void registerProtectedRoutes(ModuleRoutes moduleRoutes, ConfigRoutes configRoutes,
-                                         StatusRoutes statusRoutes, MonitoringRoutes monitoringRoutes,
+                                         StatusRoutes statusRoutes,
                                          RepositoryRoutes repoRoutes, UserRoutes userRoutes) {
         app.get("/api/modules", moduleRoutes::listModules);
         app.post("/api/modules/{id}/load", moduleRoutes::loadModule);
@@ -242,19 +297,26 @@ public class WebServer {
         app.get("/api/status", statusRoutes::getStatus);
         app.get("/api/extenders", statusRoutes::getExtenders);
 
-        // Monitoring (replaces old /api/logs)
-        app.get("/api/monitoring/series", monitoringRoutes::getSeries);
-        app.get("/api/monitoring/latest", monitoringRoutes::getLatest);
-        app.get("/api/monitoring/logs", monitoringRoutes::getLogs);
-
         app.get("/api/repository", repoRoutes::listAvailable);
         app.post("/api/repository/{id}/install", repoRoutes::installModule);
         app.post("/api/repository/{id}/uninstall", repoRoutes::uninstallModule);
 
-        app.get("/api/users", userRoutes::listUsers);
-        app.post("/api/users", userRoutes::addUser);
-        app.put("/api/users/{username}", userRoutes::updateUser);
-        app.delete("/api/users/{username}", userRoutes::removeUser);
+        app.get("/api/users", ctx -> {
+            requireRole(ctx, "admin");
+            userRoutes.listUsers(ctx);
+        });
+        app.post("/api/users", ctx -> {
+            requireRole(ctx, "admin");
+            userRoutes.addUser(ctx);
+        });
+        app.put("/api/users/{username}", ctx -> {
+            requireRole(ctx, "admin");
+            userRoutes.updateUser(ctx);
+        });
+        app.delete("/api/users/{username}", ctx -> {
+            requireRole(ctx, "admin");
+            userRoutes.removeUser(ctx);
+        });
     }
 
     /**
@@ -288,12 +350,6 @@ public class WebServer {
         app.ws("/ws/live", realtimeHandler);
     }
 
-    /**
-     * @return the realtime WebSocket handler, for use by AlertService
-     */
-    public RealtimeHandler getRealtimeHandler() {
-        return realtimeHandler;
-    }
 
     /**
      * Wire up the ExtenderServiceImpl so StatusRoutes can expose backend server data.
@@ -329,41 +385,40 @@ public class WebServer {
      * Both original and relocated package names are set for safety.
      */
     private void silenceInternalLoggers() {
-        // Jetty honours these system properties for its internal logging
         String[] prefixes = {
-                "org.eclipse.jetty",
+                "dev.erikradovan.integritypolygon.libs.javalin",
                 "dev.erikradovan.integritypolygon.libs.jetty",
                 "io.javalin",
-                "dev.erikradovan.integritypolygon.libs.javalin"
+                "org.eclipse.jetty"
         };
-        for (String prefix : prefixes) {
-            System.setProperty(prefix + ".LEVEL", "WARN");
-            System.setProperty(prefix + ".log.LEVEL", "WARN");
+
+        // ── Log4j2 (Velocity's actual logging backend) ──────────────────────────
+        // Never import Log4j2 directly — it may be in Velocity's classloader.
+        // Access everything through reflection to stay classloader-safe.
+        try {
+            Class<?> logManagerClass  = Class.forName("org.apache.logging.log4j.LogManager");
+            Class<?> levelClass       = Class.forName("org.apache.logging.log4j.Level");
+            Class<?> loggerClass      = Class.forName("org.apache.logging.log4j.core.Logger");
+            Class<?> configuratorClass = Class.forName("org.apache.logging.log4j.core.config.Configurator");
+
+            Object errorLevel = levelClass.getField("ERROR").get(null);
+
+            java.lang.reflect.Method setLevel = configuratorClass.getMethod(
+                    "setLevel", String.class, levelClass);
+
+            for (String prefix : prefixes) {
+                setLevel.invoke(null, prefix, errorLevel);
+            }
+            return;
+        } catch (Throwable ignored) {
+            // Log4j2 not accessible — fall through
         }
 
-        // Also try reflection on each concrete logger (works with Logback/Log4j2)
+        // ── System-property fallback (last resort) ──────────────────────────────
+        System.setProperty("org.eclipse.jetty.util.log.class",
+                "org.eclipse.jetty.util.log.StdErrLog");
         for (String prefix : prefixes) {
-            try {
-                org.slf4j.Logger l = LoggerFactory.getLogger(prefix);
-                var clazz = l.getClass();
-                // Try ch.qos.logback.classic.Logger#setLevel
-                for (var m : clazz.getMethods()) {
-                    if ("setLevel".equals(m.getName()) && m.getParameterCount() == 1) {
-                        Class<?> levelClass = m.getParameterTypes()[0];
-                        // Try to get WARN level from the enum/class
-                        try {
-                            Object warnLevel = levelClass.getField("WARN").get(null);
-                            m.invoke(l, warnLevel);
-                        } catch (NoSuchFieldException ignored2) {
-                            try {
-                                Object warnLevel = levelClass.getMethod("valueOf", String.class).invoke(null, "WARN");
-                                m.invoke(l, warnLevel);
-                            } catch (Exception ignored3) {}
-                        }
-                        break;
-                    }
-                }
-            } catch (Throwable ignored) {}
+            System.setProperty(prefix + ".LEVEL", "ERROR");
         }
     }
 }

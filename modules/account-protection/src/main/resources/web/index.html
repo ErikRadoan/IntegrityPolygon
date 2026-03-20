@@ -64,8 +64,8 @@ td{padding:6px 8px;border-bottom:1px solid var(--border)}
     }
   });
 })();
-const token=new URLSearchParams(location.search).get('token'),API=location.origin;
-async function api(p,o={}){const h={'Content-Type':'application/json','Authorization':'Bearer '+token};const r=await fetch(API+'/api/modules/account-protection/'+p,{...o,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
+const API=location.origin;
+async function api(p,o={}){const h={'Content-Type':'application/json'};const r=await fetch(API+'/api/modules/account-protection/'+p,{...o,headers:h,credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
 
 let initialized=false, enrollmentData=null, lastStaffJson='';

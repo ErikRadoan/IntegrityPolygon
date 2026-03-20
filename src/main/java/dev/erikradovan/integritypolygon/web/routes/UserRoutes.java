@@ -3,11 +3,10 @@ package dev.erikradovan.integritypolygon.web.routes;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.erikradovan.integritypolygon.config.ConfigManager;
+import dev.erikradovan.integritypolygon.web.auth.AuthManager;
+import dev.erikradovan.integritypolygon.web.auth.PasswordHasher;
 import io.javalin.http.Context;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.util.*;
 
 /**
@@ -17,10 +16,13 @@ import java.util.*;
 public class UserRoutes {
 
     private final ConfigManager configManager;
+    private final AuthManager authManager;
     private final Gson gson = new Gson();
+    private final PasswordHasher passwordHasher = new PasswordHasher();
 
-    public UserRoutes(ConfigManager configManager) {
+    public UserRoutes(ConfigManager configManager, AuthManager authManager) {
         this.configManager = configManager;
+        this.authManager = authManager;
     }
 
     /** GET /api/users — list all panel users (without password hashes). */
@@ -42,7 +44,7 @@ public class UserRoutes {
         JsonObject body = gson.fromJson(ctx.body(), JsonObject.class);
         String username = body.has("username") ? body.get("username").getAsString().trim() : "";
         String password = body.has("password") ? body.get("password").getAsString() : "";
-        String role = body.has("role") ? body.get("role").getAsString().trim().toLowerCase() : "viewer";
+        String role = body.has("role") ? body.get("role").getAsString().trim().toLowerCase() : "moderator";
 
         if (username.isBlank() || username.length() < 3) {
             ctx.status(400).json(Map.of("error", "Username must be at least 3 characters"));
@@ -52,8 +54,8 @@ public class UserRoutes {
             ctx.status(400).json(Map.of("error", "Password must be at least 8 characters"));
             return;
         }
-        if (!Set.of("admin", "moderator", "viewer").contains(role)) {
-            ctx.status(400).json(Map.of("error", "Role must be admin, moderator, or viewer"));
+        if (!Set.of("admin", "moderator").contains(role)) {
+            ctx.status(400).json(Map.of("error", "Role must be admin or moderator"));
             return;
         }
 
@@ -65,11 +67,9 @@ public class UserRoutes {
             }
         }
 
-        String salt = generateSalt();
         Map<String, Object> newUser = new LinkedHashMap<>();
         newUser.put("username", username);
-        newUser.put("password_hash", hashPassword(password, salt));
-        newUser.put("salt", salt);
+        newUser.put("password_hash", passwordHasher.hashPassword(password));
         newUser.put("role", role);
         newUser.put("created", new Date().toString());
 
@@ -90,11 +90,12 @@ public class UserRoutes {
             if (target.equalsIgnoreCase(String.valueOf(u.get("username")))) {
                 if (body.has("role")) {
                     String newRole = body.get("role").getAsString().trim().toLowerCase();
-                    if (!Set.of("admin", "moderator", "viewer").contains(newRole)) {
-                        ctx.status(400).json(Map.of("error", "Role must be admin, moderator, or viewer"));
+                    if (!Set.of("admin", "moderator").contains(newRole)) {
+                        ctx.status(400).json(Map.of("error", "Role must be admin or moderator"));
                         return;
                     }
                     u.put("role", newRole);
+                    authManager.invalidateUserSessions(String.valueOf(u.get("username")));
                 }
                 if (body.has("password")) {
                     String newPassword = body.get("password").getAsString();
@@ -102,9 +103,8 @@ public class UserRoutes {
                         ctx.status(400).json(Map.of("error", "Password must be at least 8 characters"));
                         return;
                     }
-                    String newSalt = generateSalt();
-                    u.put("password_hash", hashPassword(newPassword, newSalt));
-                    u.put("salt", newSalt);
+                    u.put("password_hash", passwordHasher.hashPassword(newPassword));
+                    authManager.invalidateUserSessions(String.valueOf(u.get("username")));
                 }
                 configManager.setValue("web.users", users);
                 configManager.save();
@@ -134,6 +134,7 @@ public class UserRoutes {
 
         configManager.setValue("web.users", users);
         configManager.save();
+        authManager.invalidateUserSessions(target);
         ctx.json(Map.of("success", true, "message", "User '" + target + "' removed"));
     }
 
@@ -154,22 +155,7 @@ public class UserRoutes {
             return result;
         }
 
-        // Migrate the single admin to the users list
-        List<Map<String, Object>> users = new ArrayList<>();
-        Optional<String> adminUser = configManager.getValue("web.admin.username");
-        Optional<String> adminHash = configManager.getValue("web.admin.password_hash");
-        Optional<String> adminSalt = configManager.getValue("web.admin.salt");
-        if (adminUser.isPresent() && adminHash.isPresent() && adminSalt.isPresent()) {
-            Map<String, Object> admin = new LinkedHashMap<>();
-            admin.put("username", adminUser.get());
-            admin.put("password_hash", adminHash.get());
-            admin.put("salt", adminSalt.get());
-            admin.put("created", "initial");
-            users.add(admin);
-            configManager.setValue("web.users", users);
-            configManager.save();
-        }
-        return users;
+        return new ArrayList<>();
     }
 
     /**
@@ -181,29 +167,11 @@ public class UserRoutes {
         for (Map<String, Object> u : users) {
             String uname = String.valueOf(u.get("username"));
             String hash = String.valueOf(u.get("password_hash"));
-            String salt = String.valueOf(u.get("salt"));
-            if (uname.equals(username) && hashPassword(password, salt).equals(hash)) {
+            if (uname.equals(username) && passwordHasher.verify(password, hash)) {
                 return uname;
             }
         }
         return null;
-    }
-
-    private String generateSalt() {
-        byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
-        return Base64.getEncoder().encodeToString(salt);
-    }
-
-    private String hashPassword(String password, String salt) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(Base64.getDecoder().decode(salt));
-            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to hash password", e);
-        }
     }
 }
 

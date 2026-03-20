@@ -63,9 +63,7 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
     private final ConcurrentHashMap<String, AtomicLong> countryStats = new ConcurrentHashMap<>();
 
     private ConfigManager configManager;
-    private AlertService alertService;
     private LogManager logManager;
-    private MetricsService metricsService;
 
     @Override
     public void onEnable(ModuleContext ctx) {
@@ -73,9 +71,7 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
         this.logger = ctx.getLogger();
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.configManager = reg.get(ConfigManager.class).orElse(null);
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
-        this.metricsService = reg.get(MetricsService.class).orElse(null);
 
         loadConfig();
         ctx.getEventManager().subscribe(new GeoListener());
@@ -196,20 +192,8 @@ public class GeoFilteringModule implements dev.erikradovan.integritypolygon.api.
                     Component.text(kickMessage).color(NamedTextColor.RED)));
             totalBlocked.incrementAndGet();
             log("WARN", "BLOCK", "Blocked " + name + " (" + ip + ") from " + geo.country + " [" + code + "]");
-            if (alertService != null) {
-                alertService.sendAlert(AlertService.Severity.INFO, "Geo-Block",
-                        name + " from " + geo.country + " (" + code + ") blocked");
-            }
-            if (metricsService != null) {
-                metricsService.counterInc("ip_module_blocked_total", "Total blocked connections by module",
-                        new String[]{"module", "country"}, new String[]{"geo-filtering", code});
-            }
         } else {
             totalAllowed.incrementAndGet();
-            if (metricsService != null) {
-                metricsService.counterInc("ip_module_allowed_total", "Total allowed connections by module",
-                        new String[]{"module"}, new String[]{"geo-filtering"});
-            }
         }
     }
 

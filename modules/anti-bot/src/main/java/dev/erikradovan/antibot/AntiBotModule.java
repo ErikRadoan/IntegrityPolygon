@@ -9,8 +9,6 @@ import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import dev.erikradovan.integritypolygon.api.AlertService;
-import dev.erikradovan.integritypolygon.api.MetricsService;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
@@ -92,19 +90,15 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
     private final AtomicInteger currentJoinRate = new AtomicInteger(0);
     private final List<Integer> rateHistory = Collections.synchronizedList(new ArrayList<>());
     // -- Services --
-    private AlertService alertService;
     private ConfigManager configManager;
     private LogManager logManager;
-    private MetricsService metricsService;
     @Override
     public void onEnable(ModuleContext ctx) {
         this.context = ctx;
         this.logger = ctx.getLogger();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
-        this.metricsService = reg.get(MetricsService.class).orElse(null);
         loadConfig();
         loadPersistentData();
         ctx.getEventManager().subscribe(new BotListener());
@@ -342,10 +336,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
         lastBotSeen = Instant.now();
         logger.debug("Blocked {} ({}) - {}", name, ip, reason);
         log("WARN", "BLOCK", "Blocked " + name + " (" + ip + ") - " + reason);
-        if (metricsService != null) {
-            metricsService.counterInc("ip_module_blocked_total", "Total blocked connections by module",
-                    new String[]{"module", "reason"}, new String[]{"anti-bot", reason});
-        }
     }
     private void addThreat(String ip, int score, String reason) {
         if (!enableDynamicBlocking) return;
@@ -372,17 +362,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
             int rate = globalJoinTs.size();
             currentJoinRate.set(rate);
             synchronized (rateHistory) { rateHistory.add(rate); if (rateHistory.size() > 120) rateHistory.remove(0); }
-            // -- Publish metrics --
-            if (metricsService != null) {
-                metricsService.gaugeSet("ip_antibot_join_rate", "Current join rate per second",
-                        new String[]{}, new String[]{}, rate);
-                metricsService.gaugeSet("ip_antibot_attack_active", "Whether a bot attack is active (1/0)",
-                        new String[]{}, new String[]{}, underAttack ? 1.0 : 0.0);
-                metricsService.gaugeSet("ip_module_blocked_gauge", "Total blocked connections",
-                        new String[]{"module"}, new String[]{"anti-bot"}, totalBlocked.get());
-                metricsService.gaugeSet("ip_module_allowed_gauge", "Total allowed connections",
-                        new String[]{"module"}, new String[]{"anti-bot"}, totalAllowed.get());
-            }
             // -- Flood detection --
             if (enableFloodDetection && rate >= globalJoinThreshold) {
                 if (!underAttack) {
@@ -391,11 +370,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
                     totalAttacks.incrementAndGet();
                     logger.warn("BOT ATTACK - {} joins/sec (threshold: {})", rate, globalJoinThreshold);
                     log("HIGH", "ATTACK", "Bot attack detected: " + rate + " joins/sec (threshold: " + globalJoinThreshold + ")");
-                    if (alertService != null) {
-                        alertService.sendAlert(AlertService.Severity.HIGH, "Bot Attack Detected",
-                                rate + " joins/sec. " + (enableLockdown ? "Lockdown active." : "Monitoring."),
-                                Map.of("rate", rate, "threshold", globalJoinThreshold));
-                    }
                 }
                 lastBotSeen = Instant.now();
             } else if (underAttack && lastBotSeen != null) {
@@ -405,9 +379,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
                     attackStart = null;
                     logger.info("Bot attack ended after {}s quiet", attackCooldownSec);
                     log("INFO", "ATTACK", "Bot attack ended after " + attackCooldownSec + "s quiet. " + totalBlocked.get() + " total blocked.");
-                    if (alertService != null)
-                        alertService.sendAlert(AlertService.Severity.INFO, "Bot Attack Ended",
-                                "No activity for " + attackCooldownSec + "s. " + totalBlocked.get() + " blocked.");
                 }
             }
             // -- SYN flood check: pending handshakes older than timeout --
@@ -416,9 +387,6 @@ public class AntiBotModule implements dev.erikradovan.integritypolygon.api.Modul
                 if (pendingHandshakes.size() > globalJoinThreshold) {
                     synFloodsDetected.incrementAndGet();
                     logger.warn("SYN flood suspected: {} pending handshakes", pendingHandshakes.size());
-                    if (alertService != null)
-                        alertService.sendAlert(AlertService.Severity.WARNING, "SYN Flood Detected",
-                                pendingHandshakes.size() + " incomplete handshakes");
                     pendingHandshakes.clear();
                 }
             }

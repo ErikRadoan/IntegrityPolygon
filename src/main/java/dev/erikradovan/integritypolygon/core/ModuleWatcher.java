@@ -63,8 +63,6 @@ public class ModuleWatcher implements Runnable {
                     this::processPendingFiles,
                     CHECK_INTERVAL_MS, CHECK_INTERVAL_MS, TimeUnit.MILLISECONDS);
 
-            logger.info("Module hot-reload watcher started on {}", modulesDir);
-
             while (running) {
                 WatchKey key;
                 try {

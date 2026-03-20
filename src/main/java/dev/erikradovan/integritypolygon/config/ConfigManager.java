@@ -339,7 +339,7 @@ public class ConfigManager {
     }
 
     public String getProxyHost() {
-        return getValue("proxy.host").map(Object::toString).orElse("localhost");
+        return getValue("proxy.host").map(Object::toString).orElse("your.domain");
     }
 
     public int getProxyPort() {

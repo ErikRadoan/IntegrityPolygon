@@ -53,7 +53,6 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
     private final AtomicLong apiErrors = new AtomicLong(0);
 
     private ConfigManager configManager;
-    private AlertService alertService;
     private LogManager logManager;
 
     @Override
@@ -62,7 +61,6 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
         this.logger = ctx.getLogger();
         ServiceRegistry reg = ctx.getServiceRegistry();
         this.configManager = reg.get(ConfigManager.class).orElse(null);
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
 
         loadConfig();
@@ -185,8 +183,6 @@ public class IdentityEnforcementModule implements dev.erikradovan.integritypolyg
         event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
                 Component.text(kickMessage).color(NamedTextColor.RED)));
         totalBlocked.incrementAndGet();
-        if (alertService != null)
-            alertService.sendAlert(AlertService.Severity.WARNING, "VPN/Proxy Blocked", name + " (" + ip + ") - " + reason);
     }
 
     private String getSubnet24(String ip) {

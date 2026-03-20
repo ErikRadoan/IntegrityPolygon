@@ -63,8 +63,8 @@ canvas{width:100%;height:80px}
     }
   });
 })();
-const token=new URLSearchParams(location.search).get('token'),API=location.origin,root=document.getElementById('root');
-async function api(p,o={}){const h={'Content-Type':'application/json','Authorization':'Bearer '+token,...(o.headers||{})};const r=await fetch(API+'/api/modules/anti-bot/'+p,{...o,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
+const API=location.origin,root=document.getElementById('root');
+async function api(p,o={}){const h={'Content-Type':'application/json',...(o.headers||{})};const r=await fetch(API+'/api/modules/anti-bot/'+p,{...o,headers:h,credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
 let rateData=[], initialized=false;
 
 const TOGGLES=[

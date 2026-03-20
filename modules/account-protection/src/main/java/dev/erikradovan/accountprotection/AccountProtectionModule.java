@@ -10,7 +10,6 @@ import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import dev.erikradovan.integritypolygon.api.AlertService;
 import dev.erikradovan.integritypolygon.api.ModuleContext;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard;
 import dev.erikradovan.integritypolygon.api.ModuleDashboard.RequestContext;
@@ -47,7 +46,6 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
     private volatile boolean enableSessionLocking = true;
     private volatile boolean enable2fa = true;
     // Services
-    private AlertService alertService;
     private ConfigManager configManager;
     private ProxyServer proxyServer;
     private LogManager logManager;
@@ -57,7 +55,6 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
         this.context = ctx;
         this.logger = ctx.getLogger();
         ServiceRegistry reg = ctx.getServiceRegistry();
-        this.alertService = reg.get(AlertService.class).orElse(null);
         this.configManager = reg.get(ConfigManager.class).orElse(null);
         this.proxyServer = reg.get(ProxyServer.class).orElse(null);
         this.logManager = reg.get(LogManager.class).orElse(null);
@@ -107,8 +104,6 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
                             player.sendMessage(Component.text("2FA verified. Welcome back!").color(NamedTextColor.GREEN));
                             log("INFO", "2FA", "Verified " + name + " from IP " + ip);
                         }
-                        if (alertService != null)
-                            alertService.sendAlert(AlertService.Severity.INFO, "2FA Verified", name + " verified from " + ip);
                     }
                 } else {
                     optPlayer.ifPresent(p -> p.sendMessage(Component.text("Invalid code. Try again.").color(NamedTextColor.RED)));
@@ -276,9 +271,6 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
                         Component.text("Session locked: login from new IP requires 2FA.").color(NamedTextColor.RED)));
                 logger.warn("Session lock denied {} from IP {} (prev: {})", name, ip, entry.lastIp);
                 log("WARN", "SESSION", "Denied " + name + " - session locked (IP: " + ip + ", prev: " + entry.lastIp + ")");
-                if (alertService != null)
-                    alertService.sendAlert(AlertService.Severity.WARNING, "Session Lock Triggered",
-                            name + " tried to login from new IP " + ip + " (prev: " + entry.lastIp + ")");
                 return;
             } else {
                 // No 2FA, no session lock trigger - allow
@@ -428,9 +420,6 @@ public class AccountProtectionModule implements dev.erikradovan.integritypolygon
                     player.sendMessage(Component.text("2FA verified. Welcome back!").color(NamedTextColor.GREEN));
                     log("INFO", "2FA", "Verified " + name + " from IP " + ip);
                 }
-                if (alertService != null)
-                    alertService.sendAlert(AlertService.Severity.INFO, "2FA Verified",
-                            name + " verified from " + ip);
             } else {
                 player.sendMessage(Component.text("Invalid code. Try again.").color(NamedTextColor.RED));
                 log("WARN", "2FA", "Failed verification attempt for " + name);
