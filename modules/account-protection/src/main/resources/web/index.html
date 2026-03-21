@@ -1,230 +1,453 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Account Protection</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
-[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
-[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
-[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
-[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
-[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
-body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
-.stat .v{font-size:18px;font-weight:700;margin-top:2px}
-.v.accent{color:var(--accent)}.v.green{color:var(--green)}.v.amber{color:var(--amber)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
-.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
-.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
-.sw input{display:none}
-.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
-.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
-.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
-.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
-.field{margin-bottom:8px}
-.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.field input{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
-.field input:focus{outline:none;border-color:var(--accent)}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
-.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
-.btn.sm{padding:3px 8px;font-size:10px}
-.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
-.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
-.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:700px){.cols{grid-template-columns:1fr}}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;font-weight:600;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--border)}
-td{padding:6px 8px;border-bottom:1px solid var(--border)}
-.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600}
-.badge.ok{background:rgba(34,197,94,.1);color:var(--green)}
-.badge.pending{background:rgba(245,158,11,.1);color:var(--amber)}
-.qr-box{text-align:center;padding:16px}
-.qr-box img{border-radius:8px;border:2px solid var(--border);background:#fff}
-.secret-text{font-family:monospace;font-size:14px;font-weight:600;color:var(--accent);letter-spacing:2px;text-align:center;padding:8px;background:var(--input);border-radius:6px;margin:8px 0;user-select:all}
-.enroll-result{margin-top:12px}
-.row{display:flex;gap:8px;align-items:end}
-.dismiss-btn{margin-top:8px;text-align:center}
-</style></head><body>
-<div id="root">Loading...</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Protection — IntegrityPolygon</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font:   "IBM Plex Sans", system-ui, sans-serif;
+            --mono:   "IBM Plex Mono", Consolas, monospace;
+            --bg:     #090b10;
+            --surface:#0e1118;
+            --card:   #121722;
+            --input:  #0c1018;
+            --hover:  #181f2e;
+            --active: #1e2738;
+            --border: rgba(80,110,150,.22);
+            --bhl:    rgba(110,150,200,.38);
+            --text:   #d0ecde;
+            --dim:    #5fa882;
+            --muted:  #30604a;
+            --accent: #34d399;
+            --adim:   rgba(52,211,153,.1);
+            --blue:   #2dd4bf;
+            --bdim:   rgba(45,212,191,.1);
+            --red:    #ef4444;
+            --rdim:   rgba(239,68,68,.1);
+            --amber:  #f59e0b;
+            --green:  #34d399;
+            --gdim:   rgba(52,211,153,.12);
+            --r: 3px;
+        }
+        [data-theme="midnight"]{--bg:#0f1016;--surface:#14161f;--card:#1a1e2c;--input:#1e2230;--hover:#242a3a;--active:#2c3348;--border:rgba(110,125,160,.2);--bhl:rgba(140,158,200,.36);--text:#e2e6f5;--dim:#96a0bf;--muted:#667088;--accent:#7d8bff;--adim:rgba(125,139,255,.1);--blue:#58a2ff;--bdim:rgba(88,162,255,.1);--red:#ef5b67;--rdim:rgba(239,91,103,.1);--amber:#f3a83b;--green:#22d3a7;--gdim:rgba(34,211,167,.12)}
+        [data-theme="nord"]{--bg:#2e3440;--surface:#373e4e;--card:#3f4758;--input:#464f62;--hover:#505a6e;--active:#5a6578;--border:rgba(200,210,228,.14);--bhl:rgba(210,220,235,.28);--text:#eceff4;--dim:#cad0de;--muted:#9aa5bc;--accent:#88c0d0;--adim:rgba(136,192,208,.12);--blue:#81a1c1;--bdim:rgba(129,161,193,.12);--red:#bf616a;--rdim:rgba(191,97,106,.12);--amber:#ebcb8b;--green:#a3be8c;--gdim:rgba(163,190,140,.14)}
+        [data-theme="emerald"]{--bg:#051612;--surface:#091e18;--card:#0f2820;--input:#133228;--hover:#193c30;--active:#204838;--border:rgba(60,120,95,.24);--bhl:rgba(90,160,128,.36);--text:#d8f0e6;--dim:#8ec8b0;--muted:#5a9878;--accent:#34d399;--adim:rgba(52,211,153,.12);--blue:#2dd4bf;--bdim:rgba(45,212,191,.12);--red:#f87171;--rdim:rgba(248,113,113,.12);--amber:#fbbf24;--green:#22c55e;--gdim:rgba(34,197,94,.12)}
+        [data-theme="rose"]{--bg:#120a0d;--surface:#180f14;--card:#1e1419;--input:#241820;--hover:#2c1e28;--active:#342430;--border:rgba(200,50,80,.1);--bhl:rgba(240,80,110,.2);--text:#eedce4;--dim:#a87088;--muted:#684858;--accent:#fb7185;--adim:rgba(251,113,133,.1);--blue:#e879f9;--bdim:rgba(232,121,249,.1);--red:#fb7185;--rdim:rgba(251,113,133,.1);--amber:#f59e0b;--green:#22c55e;--gdim:rgba(34,197,94,.1)}
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: transparent;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        #app { padding: 16px; }
+
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .fade-in  { animation: fadeIn  .22s ease both; }
+        .slide-up { animation: slideUp .28s ease both; }
+
+        /* ── Stat grid ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 1px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--border);
+            overflow: hidden;
+        }
+        .stat-cell { background: var(--card); padding: 11px 13px; }
+        .stat-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.1px; color: var(--muted); font-family: var(--mono);
+        }
+        .stat-value {
+            font-size: 20px; font-weight: 700; font-family: var(--mono);
+            letter-spacing: -.5px; line-height: 1.2; margin-top: 3px;
+        }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.green  { color: var(--green); }
+        .stat-value.amber  { color: var(--amber); }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted); font-family: var(--mono);
+            margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+        }
+        .card-title svg { width: 13px; height: 13px; stroke: var(--muted); fill: none; stroke-width: 2; }
+
+        .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } }
+
+        /* ── Toggle rows ── */
+        .tog-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 0; border-bottom: 1px solid var(--border);
+        }
+        .tog-row:last-of-type { border-bottom: none; }
+        .tog-label { color: var(--dim); font-size: 11px; }
+
+        /* ── Switch ── */
+        .sw { position: relative; width: 32px; height: 18px; cursor: pointer; display: inline-block; flex-shrink: 0; }
+        .sw input { display: none; }
+        .sw .track { position: absolute; inset: 0; background: var(--active); border-radius: 18px; transition: .18s; border: 1px solid var(--border); }
+        .sw .track::before { content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .18s; }
+        .sw input:checked + .track { background: var(--accent); border-color: var(--accent); }
+        .sw input:checked + .track::before { transform: translateX(14px); background: #fff; }
+
+        /* ── Field ── */
+        .field { margin-bottom: 9px; }
+        .field label {
+            display: block; font-size: 9px; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: var(--mono);
+        }
+        .field input {
+            width: 100%; padding: 6px 10px;
+            background: var(--input); border: 1px solid var(--border);
+            border-radius: var(--r); color: var(--text);
+            font-family: var(--mono); font-size: 12px; transition: border-color .15s;
+        }
+        .field input:focus { outline: none; border-color: var(--accent); }
+        .field input::placeholder { color: var(--muted); }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 6px 12px; font-size: 10px; font-weight: 700;
+            border-radius: var(--r); border: 1px solid var(--border);
+            background: var(--input); color: var(--dim); cursor: pointer;
+            transition: all .1s; font-family: var(--mono); letter-spacing: .4px;
+            text-transform: uppercase; white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--bhl); color: var(--text); background: var(--hover); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .btn.primary { background: var(--accent); color: #0a1a12; border-color: var(--accent); }
+        .btn.primary:hover { opacity: .88; }
+        .btn.danger { color: var(--red); }
+        .btn.danger:hover { border-color: var(--red); color: var(--red); background: var(--rdim); }
+        .btn.sm { padding: 3px 8px; font-size: 9px; }
+        .btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .input-row .field { margin: 0; flex: 1; }
+
+        .msg { padding: 6px 10px; border-radius: var(--r); font-size: 11px; font-family: var(--mono); margin-top: 8px; display: none; }
+        .msg.ok  { display: block; background: var(--gdim); color: var(--green); border: 1px solid rgba(52,211,153,.2); }
+        .msg.err { display: block; background: var(--rdim); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+
+        /* ── Staff table ── */
+        .staff-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .staff-table thead th {
+            text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .8px; color: var(--muted); font-family: var(--mono);
+            padding: 0 10px 8px; border-bottom: 1px solid var(--border);
+        }
+        .staff-table tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+        .staff-table tbody tr:last-child td { border-bottom: none; }
+        .staff-table tbody tr:hover td { background: var(--hover); }
+
+        /* ── Badge ── */
+        .badge {
+            display: inline-flex; align-items: center; padding: 2px 7px;
+            border-radius: 2px; font-size: 9px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .8px; font-family: var(--mono);
+            border: 1px solid;
+        }
+        .badge.active  { color: var(--green); border-color: rgba(52,211,153,.25); background: var(--gdim); }
+        .badge.pending { color: var(--amber); border-color: rgba(245,158,11,.25);  background: rgba(245,158,11,.08); }
+
+        /* ── QR / enrollment ── */
+        .enroll-box { margin-top: 12px; padding: 16px; background: var(--input); border: 1px solid var(--border); border-radius: var(--r); }
+        .qr-wrap { text-align: center; margin-bottom: 12px; }
+        .qr-wrap img { border-radius: var(--r); border: 2px solid var(--border); background: #fff; }
+        .secret-display {
+            font-family: var(--mono); font-size: 13px; font-weight: 600;
+            color: var(--accent); letter-spacing: 2px; text-align: center;
+            padding: 8px 12px; background: var(--active); border-radius: var(--r);
+            border: 1px solid var(--border); margin-bottom: 8px; user-select: all;
+            word-break: break-all;
+        }
+        .enroll-note { text-align: center; font-size: 10px; color: var(--muted); font-family: var(--mono); line-height: 1.6; margin-bottom: 10px; }
+        .enroll-note code { color: var(--accent); }
+        .enroll-actions { display: flex; gap: 6px; justify-content: center; }
+
+        .no-data { color: var(--muted); padding: 24px 0; text-align: center; font-family: var(--mono); font-size: 11px; }
+        .copy-feedback { font-size: 10px; color: var(--green); font-family: var(--mono); display: none; }
+    </style>
+</head>
+<body>
+<div id="app"><div style="color:var(--muted);padding:32px 16px;text-align:center;font-family:var(--mono);font-size:12px">Loading account protection data…</div></div>
+
 <script>
-// ── Theme sync ──
-(function(){
-  const p=new URLSearchParams(location.search),t=p.get('theme');
-  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
-  window.addEventListener('message',function(e){
-    if(e.data&&e.data.type==='ip-theme-change'){
-      const th=e.data.theme;
-      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme',th);
+    (function(){
+        const p = new URLSearchParams(location.search), t = p.get('theme');
+        if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
+        window.addEventListener('message', function(e){
+            if (e.data && e.data.type === 'ip-theme-change') {
+                const th = e.data.theme;
+                if (!th || th === 'default') document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', th);
+            }
+        });
+    })();
+
+    const API = location.origin;
+    let initialized   = false;
+    let firstRender   = true;
+    let enrollmentData = null;
+    let lastStaffJson  = '';
+
+    try {
+        const stored = sessionStorage.getItem('ip_enroll_data');
+        if (stored) enrollmentData = JSON.parse(stored);
+    } catch(e) {}
+
+    async function api(path, opts = {}) {
+        const h = { 'Content-Type': 'application/json' };
+        const r = await fetch(API + '/api/modules/account-protection/' + path, { ...opts, headers: h, credentials: 'same-origin' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw d;
+        return d;
     }
-  });
-})();
-const API=location.origin;
-async function api(p,o={}){const h={'Content-Type':'application/json'};const r=await fetch(API+'/api/modules/account-protection/'+p,{...o,headers:h,credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
-function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
+    function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+    function fa() { return firstRender ? ' fade-in' : ''; }
+    function su() { return firstRender ? ' slide-up' : ''; }
 
-let initialized=false, enrollmentData=null, lastStaffJson='';
-
-// Persist enrollment data in sessionStorage
-try { const stored=sessionStorage.getItem('ip_enroll_data'); if(stored) enrollmentData=JSON.parse(stored); } catch(e) {}
-
-async function load(){
-  try{
-    const[st,sl]=await Promise.all([api('status'),api('staff')]);
-    if(!initialized){
-      const cfg=await api('config');
-      renderFull(st,sl.staff||[],cfg);
-      initialized=true;
-    }else{
-      // Granular updates — only touch textContent, never rewrite DOM structure
-      updateStatValues(st);
-      // Only re-render staff table if data actually changed
-      const newJson=JSON.stringify(sl.staff||[]);
-      if(newJson!==lastStaffJson){
-        lastStaffJson=newJson;
-        renderStaffTable(sl.staff||[]);
-      }
+    async function load() {
+        try {
+            const [st, sl] = await Promise.all([api('status'), api('staff')]);
+            if (!initialized) {
+                const cfg = await api('config');
+                renderFull(st, sl.staff || [], cfg);
+                initialized = true;
+            } else {
+                updateStats(st);
+                const newJson = JSON.stringify(sl.staff || []);
+                if (newJson !== lastStaffJson) {
+                    lastStaffJson = newJson;
+                    renderStaffTable(sl.staff || []);
+                }
+            }
+        } catch(e) {
+            if (!initialized) document.getElementById('app').innerHTML =
+                '<div style="color:var(--red);padding:32px;text-align:center;font-family:var(--mono)">' + esc(e.error || e.message || 'Error') + '</div>';
+        }
+        firstRender = false;
     }
-  }catch(e){
-    if(!initialized) document.getElementById('root').innerHTML='<div style="color:var(--red)">'+esc(e.error||e.message||'Error')+'</div>';
-  }
-}
 
-function renderFull(st,staff,cfg){
-const root=document.getElementById('root');
-root.innerHTML=`
-<div class="grid">
-<div class="stat"><div class="l">Enrolled Staff</div><div class="v accent" id="vEnrolled">${st.enrolled_staff}</div></div>
-<div class="stat"><div class="l">Active Sessions</div><div class="v green" id="vSessions">${st.active_sessions}</div></div>
-<div class="stat"><div class="l">Pending 2FA</div><div class="v" id="vPending">${st.pending_verification}</div></div>
+    function renderFull(st, staff, cfg) {
+        document.getElementById('app').innerHTML = `
+<div class="stat-grid${fa()}">
+  <div class="stat-cell">
+    <div class="stat-label">Enrolled Staff</div>
+    <div class="stat-value accent" id="vEnrolled">${st.enrolled_staff}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Active Sessions</div>
+    <div class="stat-value green" id="vSessions">${st.active_sessions}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Pending 2FA</div>
+    <div class="stat-value${st.pending_verification > 0 ? ' amber' : ''}" id="vPending">${st.pending_verification}</div>
+  </div>
 </div>
-<div class="cols">
-<div>
-<div class="card"><h3>Settings</h3>
-<div class="tog"><span>Two-Factor Authentication</span><label class="sw"><input type="checkbox" id="t2fa" ${cfg.enable_2fa?'checked':''}><span class="tr"></span></label></div>
-<div class="tog"><span>Session IP Locking</span><label class="sw"><input type="checkbox" id="tSess" ${cfg.enable_session_locking?'checked':''}><span class="tr"></span></label></div>
-<button class="btn" style="margin-top:6px" onclick="saveCfg()">Save</button>
-<div id="cfgMsg" class="msg"></div>
-</div>
-<div class="card"><h3>Enroll Staff</h3>
-<div class="row"><div class="field" style="margin:0;flex:1"><input id="enrollName" placeholder="Minecraft username"></div><button class="btn p" onclick="enroll()">Enroll</button></div>
-<div id="enrollResult"></div>
-<div id="enrollMsg" class="msg"></div>
-</div>
-</div>
-<div>
-<div class="card"><h3>Staff Members</h3>
-<div id="staffTable"></div>
-</div>
-</div>
+
+<div class="cols${su()}">
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Settings
+      </div>
+      <div class="tog-row">
+        <span class="tog-label">Two-Factor Authentication</span>
+        <label class="sw"><input type="checkbox" id="t2fa" ${cfg.enable_2fa ? 'checked' : ''}><span class="track"></span></label>
+      </div>
+      <div class="tog-row" style="border-bottom:none">
+        <span class="tog-label">Session IP Locking</span>
+        <label class="sw"><input type="checkbox" id="tSess" ${cfg.enable_session_locking ? 'checked' : ''}><span class="track"></span></label>
+      </div>
+      <div style="height:10px"></div>
+      <button class="btn" onclick="saveCfg()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Settings
+      </button>
+      <div id="cfgMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Enroll Staff
+      </div>
+      <div class="input-row">
+        <div class="field"><input id="enrollName" placeholder="Minecraft username…"></div>
+        <button class="btn primary" onclick="enroll()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Enroll
+        </button>
+      </div>
+      <div id="enrollMsg" class="msg"></div>
+      <div id="enrollResult"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Staff Members
+      </div>
+      <div id="staffTable"></div>
+    </div>
+  </div>
 </div>`;
-lastStaffJson=JSON.stringify(staff);
-renderStaffTable(staff);
-if(enrollmentData) showEnrollment(enrollmentData);
-}
 
-function updateStatValues(st){
-  const e=document.getElementById('vEnrolled'); if(e) e.textContent=st.enrolled_staff;
-  const s=document.getElementById('vSessions'); if(s) s.textContent=st.active_sessions;
-  const p=document.getElementById('vPending');
-  if(p){ p.textContent=st.pending_verification; p.className=st.pending_verification>0?'v amber':'v'; }
-}
-
-function renderStaffTable(staff){
-  const el=document.getElementById('staffTable'); if(!el) return;
-  el.innerHTML=staff.length?`<table><thead><tr><th>Username</th><th>Status</th><th>Last IP</th><th>Trusted IPs</th><th></th></tr></thead><tbody>
-${staff.map(s=>`<tr>
-<td>${esc(s.username)}</td>
-<td>${s.enrolled?'<span class="badge ok">Active</span>':'<span class="badge pending">Pending</span>'}</td>
-<td><code style="font-size:11px">${esc(s.last_ip||'N/A')}</code></td>
-<td>${(s.trusted_ips||[]).map(ip=>'<code style="font-size:10px">'+esc(ip)+'</code>').join(', ')||'<span style="color:var(--muted)">None</span>'}</td>
-<td style="text-align:right"><button class="btn sm d" onclick="removeStaff('${esc(s.username)}')">Remove</button></td>
-</tr>`).join('')}
-</tbody></table>`:'<div style="color:var(--muted);font-size:11px">No staff enrolled yet</div>';
-}
-
-function showEnrollment(d){
-  const res=document.getElementById('enrollResult');
-  if(!res)return;
-  const otpUri=d.otp_uri||'';
-  res.innerHTML=`<div class="enroll-result">
-<div class="qr-box" id="qrBox"></div>
-<div class="secret-text" id="secretText">${esc(d.secret)}</div>
-<div style="text-align:center;margin:6px 0"><button class="btn sm" onclick="copySecret()">Copy Secret</button> <span id="copyFeedback" style="font-size:11px;color:var(--green);display:none">Copied!</span></div>
-<p style="text-align:center;font-size:11px;color:var(--dim)">Scan QR with your authenticator app.<br>Player must run <code>/2fa &lt;code&gt;</code> in-game to complete enrollment.</p>
-<div class="dismiss-btn"><button class="btn" onclick="dismissEnrollment()">Dismiss</button></div>
-</div>`;
-  // Generate QR code
-  const box=document.getElementById('qrBox');
-  if(box && otpUri){
-    try{
-      generateQR(box, otpUri, 180);
-    }catch(e){
-      box.innerHTML='<div style="padding:16px;font-size:11px;color:var(--dim)">QR generation failed.<br>Use the secret key above to add manually.</div>';
+        lastStaffJson = JSON.stringify(staff);
+        renderStaffTable(staff);
+        if (enrollmentData) showEnrollment(enrollmentData);
     }
-  }
-}
 
-function copySecret(){
-  const el=document.getElementById('secretText');
-  const fb=document.getElementById('copyFeedback');
-  if(!el)return;
-  navigator.clipboard.writeText(el.textContent).then(()=>{
-    if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2000);}
-  }).catch(()=>{
-    // Fallback for older browsers
-    const ta=document.createElement('textarea');ta.value=el.textContent;ta.style.position='fixed';ta.style.left='-9999px';
-    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2000);}
-  });
-}
+    function updateStats(st) {
+        const patch = (id, val, cls) => {
+            const el = document.getElementById(id); if (!el) return;
+            el.textContent = String(val);
+            if (cls !== undefined) el.className = cls;
+        };
+        patch('vEnrolled', st.enrolled_staff);
+        patch('vSessions', st.active_sessions);
+        patch('vPending',  st.pending_verification, 'stat-value' + (st.pending_verification > 0 ? ' amber' : ''));
+    }
 
-// ── QR Code via Google Charts API (reliable, no client-side encoding) ──
-function generateQR(container, text, size) {
-  const img = document.createElement('img');
-  img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size + '&chl=' + encodeURIComponent(text) + '&choe=UTF-8';
-  img.width = size;
-  img.height = size;
-  img.style.cssText = 'border-radius:8px;border:2px solid rgba(255,255,255,.06);background:#fff';
-  img.onerror = function() {
-    container.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--dim)">QR generation failed.<br>Use the secret key above to add manually.</div>';
-  };
-  container.appendChild(img);
-}
+    function renderStaffTable(staff) {
+        const el = document.getElementById('staffTable'); if (!el) return;
+        if (!staff.length) {
+            el.innerHTML = '<div class="no-data">No staff enrolled yet</div>';
+            return;
+        }
+        el.innerHTML = `<table class="staff-table">
+          <thead><tr>
+            <th>Username</th><th>Status</th><th>Last IP</th><th>Trusted IPs</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${staff.map(s => `<tr>
+              <td style="font-weight:600">${esc(s.username)}</td>
+              <td>${s.enrolled
+            ? '<span class="badge active">Active</span>'
+            : '<span class="badge pending">Pending</span>'}</td>
+              <td>${esc(s.last_ip || 'N/A')}</td>
+              <td style="color:var(--muted)">${(s.trusted_ips || []).join(', ') || '—'}</td>
+              <td style="text-align:right">
+                <button class="btn sm danger" onclick="removeStaff('${esc(s.username)}')">Remove</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
 
-function dismissEnrollment(){
-  enrollmentData=null;
-  try { sessionStorage.removeItem('ip_enroll_data'); } catch(e) {}
-  const res=document.getElementById('enrollResult'); if(res) res.innerHTML='';
-  const msg=document.getElementById('enrollMsg'); if(msg){msg.className='msg';msg.style.display='none';}
-}
+    function showEnrollment(d) {
+        const res = document.getElementById('enrollResult'); if (!res) return;
+        res.innerHTML = `<div class="enroll-box">
+          <div class="qr-wrap" id="qrBox"></div>
+          <div class="secret-display" id="secretText">${esc(d.secret)}</div>
+          <div class="enroll-note">
+            Scan the QR with your authenticator app, or copy the secret above.<br>
+            The player must run <code>/2fa &lt;code&gt;</code> in-game to complete enrollment.
+          </div>
+          <div class="enroll-actions">
+            <button class="btn sm" onclick="copySecret()">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy Secret
+            </button>
+            <span class="copy-feedback" id="copyFeedback">Copied!</span>
+            <button class="btn sm danger" onclick="dismissEnrollment()">Dismiss</button>
+          </div>
+        </div>`;
 
-async function enroll(){
-  const nameEl=document.getElementById('enrollName'), name=nameEl.value.trim();
-  if(!name)return;
-  const msg=document.getElementById('enrollMsg');
-  try{
-    const d=await api('staff/enroll',{method:'POST',body:JSON.stringify({username:name})});
-    enrollmentData=d;
-    try { sessionStorage.setItem('ip_enroll_data', JSON.stringify(d)); } catch(e) {}
-    showEnrollment(d);
-    msg.className='msg ok'; msg.textContent=d.message;
-    nameEl.value='';
-    const[st,sl]=await Promise.all([api('status'),api('staff')]);
-    updateStatValues(st); lastStaffJson=JSON.stringify(sl.staff||[]); renderStaffTable(sl.staff||[]);
-  }catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
-}
+        const box = document.getElementById('qrBox');
+        if (box && d.otp_uri) generateQR(box, d.otp_uri, 160);
+    }
 
-async function removeStaff(u){if(!confirm('Remove '+u+'?'))return;try{await api('staff/remove',{method:'POST',body:JSON.stringify({username:u})});const[st,sl]=await Promise.all([api('status'),api('staff')]);updateStatValues(st);lastStaffJson=JSON.stringify(sl.staff||[]);renderStaffTable(sl.staff||[])}catch(e){alert(e.error||'Failed')}}
-async function saveCfg(){
-  const msg=document.getElementById('cfgMsg');
-  try{await api('config',{method:'POST',body:JSON.stringify({enable_2fa:document.getElementById('t2fa').checked,enable_session_locking:document.getElementById('tSess').checked})});msg.className='msg ok';msg.textContent='Saved'}
-  catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
-}
-load();setInterval(load,5000);
-</script></body></html>
+    function generateQR(container, text, size) {
+        const img = document.createElement('img');
+        img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size + '&chl=' + encodeURIComponent(text) + '&choe=UTF-8';
+        img.width = size; img.height = size;
+        img.style.cssText = 'border-radius:3px;border:2px solid var(--border);background:#fff';
+        img.onerror = () => { container.innerHTML = '<div style="font-size:10px;color:var(--muted);font-family:var(--mono);padding:8px;text-align:center">QR unavailable — use the secret key above.</div>'; };
+        container.appendChild(img);
+    }
+
+    function copySecret() {
+        const el = document.getElementById('secretText');
+        const fb = document.getElementById('copyFeedback');
+        if (!el) return;
+        const text = el.textContent;
+        const show = () => { if (fb) { fb.style.display = 'inline'; setTimeout(() => fb.style.display = 'none', 2000); } };
+        navigator.clipboard.writeText(text).then(show).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
+            document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+            document.body.removeChild(ta); show();
+        });
+    }
+
+    function dismissEnrollment() {
+        enrollmentData = null;
+        try { sessionStorage.removeItem('ip_enroll_data'); } catch(e) {}
+        const res = document.getElementById('enrollResult'); if (res) res.innerHTML = '';
+        const msg = document.getElementById('enrollMsg'); if (msg) { msg.className = 'msg'; }
+    }
+
+    async function enroll() {
+        const nameEl = document.getElementById('enrollName');
+        const name   = nameEl.value.trim(); if (!name) return;
+        const msg    = document.getElementById('enrollMsg');
+        try {
+            const d = await api('staff/enroll', { method: 'POST', body: JSON.stringify({ username: name }) });
+            enrollmentData = d;
+            try { sessionStorage.setItem('ip_enroll_data', JSON.stringify(d)); } catch(e) {}
+            showEnrollment(d);
+            msg.className = 'msg ok'; msg.textContent = d.message || 'Staff enrolled successfully';
+            nameEl.value = '';
+            const [st, sl] = await Promise.all([api('status'), api('staff')]);
+            updateStats(st); lastStaffJson = JSON.stringify(sl.staff || []); renderStaffTable(sl.staff || []);
+        } catch(e) { msg.className = 'msg err'; msg.textContent = e.error || 'Enrollment failed'; }
+    }
+
+    async function removeStaff(u) {
+        if (!confirm('Remove ' + u + ' from staff?')) return;
+        try {
+            await api('staff/remove', { method: 'POST', body: JSON.stringify({ username: u }) });
+            const [st, sl] = await Promise.all([api('status'), api('staff')]);
+            updateStats(st); lastStaffJson = JSON.stringify(sl.staff || []); renderStaffTable(sl.staff || []);
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
+
+    async function saveCfg() {
+        const msg = document.getElementById('cfgMsg');
+        try {
+            await api('config', { method: 'POST', body: JSON.stringify({
+                    enable_2fa: document.getElementById('t2fa').checked,
+                    enable_session_locking: document.getElementById('tSess').checked
+                })});
+            msg.className = 'msg ok'; msg.textContent = 'Settings saved';
+        } catch(e) { msg.className = 'msg err'; msg.textContent = e.error || 'Failed'; }
+    }
+
+    load();
+    setInterval(load, 10000);
+</script>
+</body>
+</html>

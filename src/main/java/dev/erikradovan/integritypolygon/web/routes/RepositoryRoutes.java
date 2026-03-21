@@ -117,14 +117,13 @@ public class RepositoryRoutes {
             String repoVersion = mod.has("version") ? mod.get("version").getAsString() : "unknown";
             boolean isInstalled = installedVersions.containsKey(id) || loadedIds.contains(id);
             String installedVer = installedVersions.getOrDefault(id, null);
-            boolean updateAvailable = isInstalled && installedVer != null
-                    && !"unknown".equals(installedVer) && !"unknown".equals(repoVersion)
-                    && !repoVersion.equals(installedVer);
+            boolean updateAvailable = isInstalled && isUpdateAvailable(installedVer, repoVersion);
 
             Map<String, Object> info = new LinkedHashMap<>();
             info.put("id", id);
             info.put("name", mod.has("name") ? mod.get("name").getAsString() : id);
             info.put("version", repoVersion);
+            info.put("latest_version", repoVersion);
             info.put("description", mod.has("description") ? mod.get("description").getAsString() : "");
             info.put("download_url", resolveDownloadUrl(mod, id, repositoryBase));
             info.put("image_url", mod.has("image_url") ? mod.get("image_url").getAsString() : "");
@@ -135,6 +134,9 @@ public class RepositoryRoutes {
                 info.put("installed_version", installedVer);
             }
             info.put("update_available", updateAvailable);
+            if (updateAvailable) {
+                info.put("update_reason", "newer_version_available");
+            }
             result.add(info);
         }
 
@@ -203,13 +205,31 @@ public class RepositoryRoutes {
                 return;
             }
 
+            Map<String, String> installedVersions = scanInstalledModuleVersions();
+            boolean wasInstalled = installedVersions.containsKey(moduleId);
             Path targetPath = moduleManager.getModulesDir().resolve(moduleId + ".jar");
             try (InputStream body = downloadResponse.body()) {
                 Files.copy(body, targetPath, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            moduleManager.loadModule(targetPath.toFile());
-            ctx.json(Map.of("success", true, "message", moduleId + " installed and loaded"));
+            if (!wasInstalled) {
+                Set<String> disabled = getDisabledModules();
+                disabled.add(moduleId);
+                saveDisabledModules(disabled);
+                ctx.json(Map.of(
+                        "success", true,
+                        "message", moduleId + " installed (disabled by default)",
+                        "enabled", false,
+                        "update", false
+                ));
+                return;
+            }
+
+            ctx.json(Map.of(
+                    "success", true,
+                    "message", moduleId + " update downloaded",
+                    "update", true
+            ));
         } catch (Exception e) {
             logger.error("Failed to install module {}", moduleId, e);
             ctx.status(500).json(Map.of("error", "Installation failed: " + e.getMessage()));
@@ -404,5 +424,48 @@ public class RepositoryRoutes {
         }
 
         return repositoryBase + "/modules/" + moduleId + ".jar";
+    }
+
+    private Set<String> getDisabledModules() {
+        Optional<Object> raw = configManager.getValue("modules.disabled");
+        if (raw.isPresent() && raw.get() instanceof List<?> list) {
+            Set<String> set = new LinkedHashSet<>();
+            for (Object item : list) set.add(String.valueOf(item));
+            return set;
+        }
+        return new LinkedHashSet<>();
+    }
+
+    private void saveDisabledModules(Set<String> disabled) {
+        configManager.setValue("modules.disabled", new ArrayList<>(disabled));
+        configManager.save();
+    }
+
+    private boolean isUpdateAvailable(String installedVersion, String latestVersion) {
+        if (installedVersion == null || latestVersion == null) return false;
+        String installed = installedVersion.trim();
+        String latest = latestVersion.trim();
+        if (installed.isBlank() || latest.isBlank()) return false;
+        if ("unknown".equalsIgnoreCase(installed) || "unknown".equalsIgnoreCase(latest)) {
+            return !installed.equalsIgnoreCase(latest);
+        }
+        if (installed.equalsIgnoreCase(latest)) return false;
+
+        String[] left = latest.replace('-', '.').replace('_', '.').split("\\.");
+        String[] right = installed.replace('-', '.').replace('_', '.').split("\\.");
+        int max = Math.max(left.length, right.length);
+        for (int i = 0; i < max; i++) {
+            String l = i < left.length ? left[i] : "0";
+            String r = i < right.length ? right[i] : "0";
+            if (l.chars().allMatch(Character::isDigit) && r.chars().allMatch(Character::isDigit)) {
+                int cmp = Integer.compare(Integer.parseInt(l), Integer.parseInt(r));
+                if (cmp != 0) return cmp > 0;
+            } else {
+                int cmp = l.compareToIgnoreCase(r);
+                if (cmp != 0) return cmp > 0;
+            }
+        }
+
+        return !latest.equalsIgnoreCase(installed);
     }
 }

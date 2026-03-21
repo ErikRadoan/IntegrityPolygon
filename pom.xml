@@ -81,8 +81,17 @@
                                 <filter>
                                     <artifact>org.xerial:sqlite-jdbc</artifact>
                                     <includes>
-                                        <include>**</include>
+                                        <include>org/sqlite/**</include>
+                                        <include>META-INF/services/**</include>
+                                        <include>META-INF/native-image/**</include>
+                                        <include>META-INF/versions/**</include>
                                     </includes>
+                                    <excludes>
+                                        <exclude>org/sqlite/native/Windows/**</exclude>
+                                        <exclude>org/sqlite/native/Mac/**</exclude>
+                                        <exclude>org/sqlite/native/FreeBSD/**</exclude>
+                                        <exclude>org/sqlite/native/Linux-Android/**</exclude>
+                                    </excludes>
                                 </filter>
                                 <filter>
                                     <artifact>org.eclipse.jetty:*</artifact>

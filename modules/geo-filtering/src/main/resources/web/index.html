@@ -1,202 +1,497 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Geo-Filtering</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
-[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
-[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
-[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
-[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
-[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
-body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
-.stat .v{font-size:18px;font-weight:700;margin-top:2px}
-.v.red{color:var(--red)}.v.green{color:var(--green)}.v.accent{color:var(--accent)}.v.amber{color:var(--amber)}.v.blue{color:var(--blue)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
-.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
-.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
-.sw input{display:none}
-.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
-.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
-.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
-.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
-.field{margin-bottom:8px}
-.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.field input,.field select{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
-.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
-.row{display:flex;gap:8px;align-items:end}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
-.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
-.btn.sm{padding:3px 8px;font-size:10px}
-.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
-.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
-.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:700px){.cols{grid-template-columns:1fr}}
-.tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;margin:2px;background:var(--input);border:1px solid var(--border)}
-.tag .x{cursor:pointer;margin-left:4px;color:var(--red);font-weight:700}
-.tag .x:hover{opacity:.7}
-.mode-badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase}
-.mode-badge.blacklist{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
-.mode-badge.whitelist{background:rgba(34,197,94,.08);color:var(--green);border:1px solid rgba(34,197,94,.15)}
-.bar-chart{margin-top:6px}.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px}
-.bar-label{width:30px;text-align:right;font-weight:600;color:var(--dim)}
-.bar-fill{height:14px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--blue));min-width:2px;transition:width .3s}
-.bar-val{color:var(--dim);font-size:10px}
-.check-result{padding:12px;background:var(--input);border-radius:6px;margin-top:8px;font-size:12px}
-.cr-row{display:flex;justify-content:space-between;padding:3px 0}
-.cr-label{color:var(--dim)}
-</style></head><body>
-<div id="root">Loading...</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geo-Filtering — IntegrityPolygon</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font:   "IBM Plex Sans", system-ui, sans-serif;
+            --mono:   "IBM Plex Mono", Consolas, monospace;
+            --bg:     #090b10;
+            --surface:#0e1118;
+            --card:   #121722;
+            --input:  #0c1018;
+            --hover:  #181f2e;
+            --active: #1e2738;
+            --border: rgba(80,110,150,.22);
+            --bhl:    rgba(110,150,200,.38);
+            --text:   #d0ecde;
+            --dim:    #5fa882;
+            --muted:  #30604a;
+            --accent: #34d399;
+            --adim:   rgba(52,211,153,.1);
+            --blue:   #2dd4bf;
+            --bdim:   rgba(45,212,191,.1);
+            --red:    #ef4444;
+            --rdim:   rgba(239,68,68,.1);
+            --amber:  #f59e0b;
+            --green:  #34d399;
+            --gdim:   rgba(52,211,153,.12);
+            --r: 3px;
+        }
+        [data-theme="midnight"]{--bg:#0f1016;--surface:#14161f;--card:#1a1e2c;--input:#1e2230;--hover:#242a3a;--active:#2c3348;--border:rgba(110,125,160,.2);--bhl:rgba(140,158,200,.36);--text:#e2e6f5;--dim:#96a0bf;--muted:#667088;--accent:#7d8bff;--adim:rgba(125,139,255,.1);--blue:#58a2ff;--bdim:rgba(88,162,255,.1);--red:#ef5b67;--rdim:rgba(239,91,103,.1);--amber:#f3a83b;--green:#22d3a7;--gdim:rgba(34,211,167,.12)}
+        [data-theme="nord"]{--bg:#2e3440;--surface:#373e4e;--card:#3f4758;--input:#464f62;--hover:#505a6e;--active:#5a6578;--border:rgba(200,210,228,.14);--bhl:rgba(210,220,235,.28);--text:#eceff4;--dim:#cad0de;--muted:#9aa5bc;--accent:#88c0d0;--adim:rgba(136,192,208,.12);--blue:#81a1c1;--bdim:rgba(129,161,193,.12);--red:#bf616a;--rdim:rgba(191,97,106,.12);--amber:#ebcb8b;--green:#a3be8c;--gdim:rgba(163,190,140,.14)}
+        [data-theme="emerald"]{--bg:#051612;--surface:#091e18;--card:#0f2820;--input:#133228;--hover:#193c30;--active:#204838;--border:rgba(60,120,95,.24);--bhl:rgba(90,160,128,.36);--text:#d8f0e6;--dim:#8ec8b0;--muted:#5a9878;--accent:#34d399;--adim:rgba(52,211,153,.12);--blue:#2dd4bf;--bdim:rgba(45,212,191,.12);--red:#f87171;--rdim:rgba(248,113,113,.12);--amber:#fbbf24;--green:#22c55e;--gdim:rgba(34,197,94,.12)}
+        [data-theme="rose"]{--bg:#120a0d;--surface:#180f14;--card:#1e1419;--input:#241820;--hover:#2c1e28;--active:#342430;--border:rgba(200,50,80,.1);--bhl:rgba(240,80,110,.2);--text:#eedce4;--dim:#a87088;--muted:#684858;--accent:#fb7185;--adim:rgba(251,113,133,.1);--blue:#e879f9;--bdim:rgba(232,121,249,.1);--red:#fb7185;--rdim:rgba(251,113,133,.1);--amber:#f59e0b;--green:#22c55e;--gdim:rgba(34,197,94,.1)}
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: transparent;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        #app { padding: 16px; }
+
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .fade-in  { animation: fadeIn  .22s ease both; }
+        .slide-up { animation: slideUp .28s ease both; }
+
+        /* ── Stat grid ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 1px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--border);
+            overflow: hidden;
+        }
+        .stat-cell {
+            background: var(--card);
+            padding: 11px 13px;
+        }
+        .stat-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.1px; color: var(--muted); font-family: var(--mono);
+        }
+        .stat-value {
+            font-size: 20px; font-weight: 700; font-family: var(--mono);
+            letter-spacing: -.5px; line-height: 1.2; margin-top: 3px;
+        }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.green  { color: var(--green); }
+        .stat-value.red    { color: var(--red); }
+        .stat-value.amber  { color: var(--amber); }
+        .stat-value.blue   { color: var(--blue); }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted);
+            font-family: var(--mono); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .card-title svg { width: 13px; height: 13px; stroke: var(--muted); fill: none; stroke-width: 2; }
+
+        /* ── Layout ── */
+        .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } }
+
+        /* ── Toggle rows ── */
+        .tog-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 0; font-size: 12px; color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+        .tog-row:last-of-type { border-bottom: none; }
+        .tog-label { color: var(--dim); font-size: 11px; }
+
+        /* ── Switch ── */
+        .sw { position: relative; width: 32px; height: 18px; cursor: pointer; display: inline-block; flex-shrink: 0; }
+        .sw input { display: none; }
+        .sw .track { position: absolute; inset: 0; background: var(--active); border-radius: 18px; transition: .18s; border: 1px solid var(--border); }
+        .sw .track::before { content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .18s; }
+        .sw input:checked + .track { background: var(--accent); border-color: var(--accent); }
+        .sw input:checked + .track::before { transform: translateX(14px); background: #fff; }
+
+        /* ── Field ── */
+        .field { margin-bottom: 9px; }
+        .field label {
+            display: block; font-size: 9px; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: var(--mono);
+        }
+        .field input, .field select {
+            width: 100%; padding: 6px 10px;
+            background: var(--input); border: 1px solid var(--border);
+            border-radius: var(--r); color: var(--text);
+            font-family: var(--mono); font-size: 12px; transition: border-color .15s;
+        }
+        .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+        .field input::placeholder { color: var(--muted); }
+        .field select option { background: var(--card); }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 6px 12px; font-size: 10px; font-weight: 700;
+            border-radius: var(--r); border: 1px solid var(--border);
+            background: var(--input); color: var(--dim); cursor: pointer;
+            transition: all .1s; font-family: var(--mono); letter-spacing: .4px;
+            text-transform: uppercase; white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--bhl); color: var(--text); background: var(--hover); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .btn.primary { background: var(--accent); color: #0a1a12; border-color: var(--accent); }
+        .btn.primary:hover { opacity: .88; }
+        .btn.danger { color: var(--red); }
+        .btn.danger:hover { border-color: var(--red); color: var(--red); background: var(--rdim); }
+        .btn.sm { padding: 3px 8px; font-size: 9px; }
+        .btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        /* ── Row layout ── */
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .input-row .field { margin: 0; flex: 1; }
+
+        /* ── Feedback messages ── */
+        .msg { padding: 6px 10px; border-radius: var(--r); font-size: 11px; font-family: var(--mono); margin-top: 8px; display: none; }
+        .msg.ok  { display: block; background: var(--gdim); color: var(--green); border: 1px solid rgba(52,211,153,.2); }
+        .msg.err { display: block; background: var(--rdim); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+
+        /* ── Mode badge ── */
+        .mode-badge {
+            display: inline-flex; align-items: center; padding: 2px 8px;
+            border-radius: 2px; font-size: 9px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .8px; font-family: var(--mono);
+            border: 1px solid;
+        }
+        .mode-badge.blacklist { color: var(--red);   border-color: rgba(239,68,68,.3);  background: var(--rdim); }
+        .mode-badge.whitelist { color: var(--green); border-color: rgba(52,211,153,.25); background: var(--gdim); }
+
+        /* ── Country tags ── */
+        .tag-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; min-height: 28px; }
+        .tag {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 8px; border-radius: 2px; font-size: 10px; font-weight: 700;
+            font-family: var(--mono); background: var(--input); border: 1px solid var(--border);
+            color: var(--dim); letter-spacing: .4px;
+        }
+        .tag .x {
+            cursor: pointer; color: var(--muted); font-size: 12px; line-height: 1;
+            transition: color .1s;
+        }
+        .tag .x:hover { color: var(--red); }
+
+        /* ── Bar chart ── */
+        .bar-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+        .bar-row  { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; }
+        .bar-code { width: 28px; text-align: right; color: var(--dim); font-weight: 700; flex-shrink: 0; }
+        .bar-track { flex: 1; height: 6px; background: var(--active); border-radius: 1px; overflow: hidden; }
+        .bar-fill  { height: 100%; border-radius: 1px; background: var(--accent); transition: width .35s; }
+        .bar-count { width: 36px; text-align: right; color: var(--muted); font-size: 10px; flex-shrink: 0; }
+
+        /* ── Lookup result ── */
+        .lookup-result {
+            margin-top: 10px; background: var(--input); border: 1px solid var(--border);
+            border-radius: var(--r); overflow: hidden;
+        }
+        .lookup-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px;
+        }
+        .lookup-row:last-child { border-bottom: none; }
+        .lookup-key { color: var(--muted); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+        .lookup-val { font-family: var(--mono); font-size: 11px; }
+
+        /* ── Inline section divider ── */
+        .section-note { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-bottom: 8px; }
+
+        /* ── Warn banner ── */
+        .warn-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 12px; border-radius: var(--r);
+            background: rgba(245,158,11,.08); color: var(--amber);
+            border: 1px solid rgba(245,158,11,.2); font-size: 11px;
+            font-family: var(--mono); margin-bottom: 10px;
+        }
+
+        .no-data { color: var(--muted); padding: 32px 16px; text-align: center; font-family: var(--mono); font-size: 12px; }
+
+        .inline-flex { display: flex; align-items: center; justify-content: space-between; }
+        .cache-info { font-size: 11px; font-family: var(--mono); color: var(--dim); }
+    </style>
+</head>
+<body>
+<div id="app"><div class="no-data">Loading geo-filtering data…</div></div>
+
 <script>
-// ── Theme sync ──
-(function(){
-  const p=new URLSearchParams(location.search),t=p.get('theme');
-  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
-  window.addEventListener('message',function(e){
-    if(e.data&&e.data.type==='ip-theme-change'){
-      const th=e.data.theme;
-      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme',th);
-    }
-  });
-})();
-const API=location.origin;
-async function api(p,o={}){const h={'Content-Type':'application/json'};const r=await fetch(API+'/api/modules/geo-filtering/'+p,{...o,headers:h,credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
-function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
-let initialized=false;
+    // ── Theme init ──
+    (function(){
+        const p = new URLSearchParams(location.search), t = p.get('theme');
+        if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
+        window.addEventListener('message', function(e){
+            if (e.data && e.data.type === 'ip-theme-change') {
+                const th = e.data.theme;
+                if (!th || th === 'default') document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', th);
+            }
+        });
+    })();
 
-async function load(){
-  try{
-    const st=await api('status');
-    if(!initialized){
-      const[cfg,cl,stats]=await Promise.all([api('config'),api('countries'),api('stats')]);
-      renderFull(st,cfg,cl,stats);
-      initialized=true;
-    }else{
-      updateStats(st);
-    }
-  }catch(e){
-    if(!initialized) document.getElementById('root').innerHTML='<div style="color:var(--red)">'+esc(e.error||e.message||'Error')+'</div>';
-  }
-}
+    const API = location.origin;
+    let initialized = false;
+    let firstRender  = true;
 
-function renderFull(st,cfg,cl,stats){
-const root=document.getElementById('root');
-const modeClass=cfg.mode==='whitelist'?'whitelist':'blacklist';
-root.innerHTML=`
-<div class="grid">
-<div class="stat"><div class="l">Mode</div><div class="v"><span class="mode-badge ${modeClass}">${cfg.mode}</span></div></div>
-<div class="stat"><div class="l">Checked</div><div class="v accent" id="vChecked">${st.total_checked}</div></div>
-<div class="stat"><div class="l">Blocked</div><div class="v red" id="vBlocked">${st.total_blocked}</div></div>
-<div class="stat"><div class="l">Allowed</div><div class="v green" id="vAllowed">${st.total_allowed}</div></div>
-<div class="stat"><div class="l">Cache Hits</div><div class="v blue" id="vCache">${st.cache_hits}</div></div>
-<div class="stat"><div class="l">Countries</div><div class="v" id="vCountries">${st.country_count}</div></div>
-<div class="stat"><div class="l">API Calls</div><div class="v" id="vApi">${st.api_calls}</div></div>
-<div class="stat"><div class="l">Cache Size</div><div class="v" id="vCacheSize">${st.cache_size}</div></div>
+    async function api(path, opts = {}) {
+        const h = { 'Content-Type': 'application/json' };
+        const r = await fetch(API + '/api/modules/geo-filtering/' + path, { ...opts, headers: h, credentials: 'same-origin' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw d;
+        return d;
+    }
+    function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+    function fa() { return firstRender ? ' fade-in' : ''; }
+    function su() { return firstRender ? ' slide-up' : ''; }
+
+    // ── Poll ──
+    async function load() {
+        try {
+            const st = await api('status');
+            if (!initialized) {
+                const [cfg, cl, stats] = await Promise.all([api('config'), api('countries'), api('stats')]);
+                renderFull(st, cfg, cl, stats);
+                initialized = true;
+            } else {
+                updateStats(st);
+            }
+        } catch(e) {
+            if (!initialized) document.getElementById('app').innerHTML =
+                '<div class="no-data">' + esc(e.error || e.message || 'Error') + '</div>';
+        }
+        firstRender = false;
+    }
+
+    function renderFull(st, cfg, cl, stats) {
+        const modeClass = cfg.mode === 'whitelist' ? 'whitelist' : 'blacklist';
+        document.getElementById('app').innerHTML = `
+<div class="stat-grid${fa()}">
+  <div class="stat-cell">
+    <div class="stat-label">Mode</div>
+    <div style="margin-top:5px"><span class="mode-badge ${modeClass}" id="vMode">${esc(cfg.mode)}</span></div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Checked</div>
+    <div class="stat-value accent" id="vChecked">${st.total_checked}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Blocked</div>
+    <div class="stat-value red" id="vBlocked">${st.total_blocked}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Allowed</div>
+    <div class="stat-value green" id="vAllowed">${st.total_allowed}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Cache Hits</div>
+    <div class="stat-value blue" id="vCache">${st.cache_hits}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Countries</div>
+    <div class="stat-value" id="vCountries">${st.country_count}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">API Calls</div>
+    <div class="stat-value" id="vApi">${st.api_calls}</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Cache Size</div>
+    <div class="stat-value" id="vCacheSize">${st.cache_size}</div>
+  </div>
 </div>
-<div class="cols">
-<div>
-<div class="card"><h3>Settings</h3>
-<div class="tog"><span>Module Enabled</span><label class="sw"><input type="checkbox" id="tEnabled" ${cfg.enabled?'checked':''}><span class="tr"></span></label></div>
-<div class="field" style="margin-top:8px"><label>Filter Mode</label>
-<select id="cMode"><option value="blacklist" ${cfg.mode==='blacklist'?'selected':''}>Blacklist (block listed countries)</option><option value="whitelist" ${cfg.mode==='whitelist'?'selected':''}>Whitelist (only allow listed countries)</option></select>
-</div>
-<div class="field"><label>Kick Message</label><input id="cKick" value="${esc(cfg.kick_message)}"></div>
-<div class="field"><label>Cache TTL (minutes)</label><input id="cTtl" type="number" value="${cfg.cache_ttl_minutes}"></div>
-<button class="btn p" onclick="saveConfig()">Save Configuration</button>
-<div id="cfgMsg" class="msg"></div>
-</div>
-<div class="card"><h3>IP Lookup</h3>
-<div class="row"><div class="field" style="margin:0;flex:1"><input id="lookupIp" placeholder="Enter IP to check"></div><button class="btn" onclick="doLookup()">Lookup</button></div>
-<div id="lookupResult"></div>
-</div>
-<div class="card"><h3>Cache</h3>
-<div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--dim);font-size:12px" id="cacheInfo">${st.cache_size} entries</span><button class="btn sm d" onclick="clearCache()">Clear</button></div>
-</div>
-</div>
-<div>
-<div class="card"><h3>Country ${cfg.mode==='whitelist'?'Whitelist':'Blacklist'}</h3>
-<div style="margin-bottom:10px;font-size:11px;color:var(--dim)">${cfg.mode==='whitelist'?'Only players from these countries can join':'Players from these countries will be blocked'}</div>
-<div class="row" style="margin-bottom:10px"><div class="field" style="margin:0;flex:1"><input id="addCode" placeholder="ISO code (e.g. US, DE, CZ)" maxlength="3" style="text-transform:uppercase"></div><button class="btn" onclick="addCountry()">Add</button></div>
-<div id="countryTags">${renderTags(cl.countries||[])}</div>
-<div style="margin-top:8px;font-size:10px;color:var(--muted)">Common codes: US, GB, DE, FR, CZ, RU, CN, BR, IN, PL, UA, NL</div>
-</div>
-<div class="card"><h3>Top Countries (connections)</h3>
-<div id="countryChart" class="bar-chart">${renderChart(stats.countries||{})}</div>
-</div>
-</div>
+
+<div class="cols${su()}">
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Settings
+      </div>
+      <div class="tog-row">
+        <span class="tog-label">Module Enabled</span>
+        <label class="sw"><input type="checkbox" id="tEnabled" ${cfg.enabled ? 'checked' : ''}><span class="track"></span></label>
+      </div>
+      <div style="height:10px"></div>
+      <div class="field">
+        <label>Filter Mode</label>
+        <select id="cMode">
+          <option value="blacklist" ${cfg.mode === 'blacklist' ? 'selected' : ''}>Blacklist — block listed countries</option>
+          <option value="whitelist" ${cfg.mode === 'whitelist' ? 'selected' : ''}>Whitelist — only allow listed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kick Message</label>
+        <input id="cKick" value="${esc(cfg.kick_message)}">
+      </div>
+      <div class="field">
+        <label>Cache TTL (minutes)</label>
+        <input id="cTtl" type="number" value="${cfg.cache_ttl_minutes}">
+      </div>
+      <button class="btn primary" onclick="saveConfig()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Configuration
+      </button>
+      <div id="cfgMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        IP Lookup
+      </div>
+      <div class="input-row">
+        <div class="field"><input id="lookupIp" placeholder="Enter IP address…"></div>
+        <button class="btn" onclick="doLookup()">Lookup</button>
+      </div>
+      <div id="lookupResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Cache
+      </div>
+      <div class="inline-flex">
+        <span class="cache-info" id="cacheInfo">${st.cache_size} entries cached</span>
+        <button class="btn sm danger" onclick="clearCache()">Clear Cache</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Country <span id="listModeLabel">${cfg.mode === 'whitelist' ? 'Whitelist' : 'Blacklist'}</span>
+      </div>
+      <div class="section-note" id="listModeNote">${cfg.mode === 'whitelist' ? 'Only players from these countries can join.' : 'Players from these countries will be blocked.'}</div>
+      <div class="input-row" style="margin-bottom:10px">
+        <div class="field"><input id="addCode" placeholder="ISO code e.g. US, DE, CZ" maxlength="3" style="text-transform:uppercase"></div>
+        <button class="btn" onclick="addCountry()">Add</button>
+      </div>
+      <div class="tag-list" id="countryTags">${renderTags(cl.countries || [])}</div>
+      <div style="margin-top:10px;font-size:10px;color:var(--muted);font-family:var(--mono)">
+        Common: US · GB · DE · FR · CZ · RU · CN · BR · IN · PL · UA · NL
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Top Countries by Connections
+      </div>
+      <div id="countryChart">${renderChart(stats.countries || {})}</div>
+    </div>
+  </div>
 </div>`;
-}
+    }
 
-function updateStats(st){
-  const ids={vChecked:st.total_checked,vBlocked:st.total_blocked,vAllowed:st.total_allowed,vCache:st.cache_hits,vCountries:st.country_count,vApi:st.api_calls,vCacheSize:st.cache_size};
-  for(const[id,val]of Object.entries(ids)){const el=document.getElementById(id);if(el)el.textContent=val;}
-}
+    function updateStats(st) {
+        const patch = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        patch('vChecked',  st.total_checked);
+        patch('vBlocked',  st.total_blocked);
+        patch('vAllowed',  st.total_allowed);
+        patch('vCache',    st.cache_hits);
+        patch('vCountries',st.country_count);
+        patch('vApi',      st.api_calls);
+        patch('vCacheSize',st.cache_size);
+        patch('cacheInfo', st.cache_size + ' entries cached');
+    }
 
-function renderTags(list){
-  if(!list.length) return '<div style="color:var(--muted);font-size:11px">No countries configured</div>';
-  return list.map(c=>'<span class="tag">'+esc(c)+'<span class="x" onclick="removeCountry(\''+esc(c)+'\')">&times;</span></span>').join('');
-}
+    function renderTags(list) {
+        if (!list.length) return '<div class="no-data" style="padding:16px 0">No countries configured</div>';
+        return list.map(c =>
+            `<span class="tag">${esc(c)}<span class="x" onclick="removeCountry('${esc(c)}')">&times;</span></span>`
+        ).join('');
+    }
 
-function renderChart(data){
-  const entries=Object.entries(data);
-  if(!entries.length) return '<div style="color:var(--muted);font-size:11px">No data yet</div>';
-  const max=Math.max(...entries.map(e=>e[1]),1);
-  return entries.map(([code,count])=>{
-    const pct=Math.max(2,count/max*100);
-    return '<div class="bar-row"><span class="bar-label">'+esc(code)+'</span><div class="bar-fill" style="width:'+pct+'%"></div><span class="bar-val">'+count+'</span></div>';
-  }).join('');
-}
+    function renderChart(data) {
+        const entries = Object.entries(data);
+        if (!entries.length) return '<div class="no-data" style="padding:16px 0">No connection data yet</div>';
+        const max = Math.max(...entries.map(e => e[1]), 1);
+        return '<div class="bar-list">' + entries.map(([code, count]) => {
+            const pct = Math.max(2, (count / max) * 100);
+            return `<div class="bar-row">
+              <span class="bar-code">${esc(code)}</span>
+              <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <span class="bar-count">${count}</span>
+            </div>`;
+        }).join('') + '</div>';
+    }
 
-async function saveConfig(){
-  const msg=document.getElementById('cfgMsg');
-  try{
-    await api('config',{method:'POST',body:JSON.stringify({
-      enabled:document.getElementById('tEnabled').checked,
-      mode:document.getElementById('cMode').value,
-      kick_message:document.getElementById('cKick').value,
-      cache_ttl_minutes:+document.getElementById('cTtl').value
-    })});
-    msg.className='msg ok';msg.textContent='Saved. Reload page to see mode change.';
-  }catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}
-}
+    async function saveConfig() {
+        const msg = document.getElementById('cfgMsg');
+        try {
+            await api('config', { method: 'POST', body: JSON.stringify({
+                    enabled: document.getElementById('tEnabled').checked,
+                    mode: document.getElementById('cMode').value,
+                    kick_message: document.getElementById('cKick').value,
+                    cache_ttl_minutes: +document.getElementById('cTtl').value
+                })});
+            msg.className = 'msg ok'; msg.textContent = 'Configuration saved. Reload to apply mode change.';
+        } catch(e) { msg.className = 'msg err'; msg.textContent = e.error || 'Failed to save'; }
+    }
 
-async function addCountry(){
-  const code=document.getElementById('addCode').value.trim().toUpperCase();
-  if(!code)return;
-  try{await api('countries/add',{method:'POST',body:JSON.stringify({code})});
-    const cl=await api('countries');
-    document.getElementById('countryTags').innerHTML=renderTags(cl.countries||[]);
-    document.getElementById('addCode').value='';
-  }catch(e){alert(e.error||'Failed')}
-}
+    async function addCountry() {
+        const code = document.getElementById('addCode').value.trim().toUpperCase();
+        if (!code) return;
+        try {
+            await api('countries/add', { method: 'POST', body: JSON.stringify({ code }) });
+            const cl = await api('countries');
+            document.getElementById('countryTags').innerHTML = renderTags(cl.countries || []);
+            document.getElementById('addCode').value = '';
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
 
-async function removeCountry(code){
-  try{await api('countries/remove',{method:'POST',body:JSON.stringify({code})});
-    const cl=await api('countries');
-    document.getElementById('countryTags').innerHTML=renderTags(cl.countries||[]);
-  }catch(e){alert(e.error||'Failed')}
-}
+    async function removeCountry(code) {
+        try {
+            await api('countries/remove', { method: 'POST', body: JSON.stringify({ code }) });
+            const cl = await api('countries');
+            document.getElementById('countryTags').innerHTML = renderTags(cl.countries || []);
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
 
-async function clearCache(){try{await api('cache/clear',{method:'POST'})}catch(e){alert(e.error||'Failed')}}
+    async function clearCache() {
+        try { await api('cache/clear', { method: 'POST' }); }
+        catch(e) { alert(e.error || 'Failed'); }
+    }
 
-async function doLookup(){
-  const ip=document.getElementById('lookupIp').value.trim(),res=document.getElementById('lookupResult');
-  if(!ip)return;
-  res.innerHTML='<div style="color:var(--dim);margin-top:8px">Looking up...</div>';
-  try{
-    const d=await api('lookup',{method:'POST',body:JSON.stringify({ip})});
-    const col=d.would_block?'var(--red)':'var(--green)';
-    res.innerHTML='<div class="check-result"><div class="cr-row"><span class="cr-label">IP</span><span style="font-family:monospace">'+esc(d.ip)+'</span></div><div class="cr-row"><span class="cr-label">Country</span><span>'+esc(d.country)+' ['+esc(d.country_code)+']</span></div><div class="cr-row"><span class="cr-label">Would Block</span><span style="color:'+col+'">'+(d.would_block?'Yes':'No')+'</span></div><div class="cr-row"><span class="cr-label">Mode</span><span>'+esc(d.mode)+'</span></div></div>';
-  }catch(e){res.innerHTML='<div class="msg err">'+esc(e.error||'Failed')+'</div>'}
-}
+    async function doLookup() {
+        const ip = document.getElementById('lookupIp').value.trim();
+        const res = document.getElementById('lookupResult');
+        if (!ip) return;
+        res.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:var(--mono);margin-top:8px">Looking up…</div>';
+        try {
+            const d = await api('lookup', { method: 'POST', body: JSON.stringify({ ip }) });
+            const blocked = d.would_block;
+            res.innerHTML = `<div class="lookup-result">
+              <div class="lookup-row"><span class="lookup-key">IP</span><span class="lookup-val">${esc(d.ip)}</span></div>
+              <div class="lookup-row"><span class="lookup-key">Country</span><span class="lookup-val">${esc(d.country)} [${esc(d.country_code)}]</span></div>
+              <div class="lookup-row"><span class="lookup-key">Mode</span><span class="lookup-val">${esc(d.mode)}</span></div>
+              <div class="lookup-row">
+                <span class="lookup-key">Action</span>
+                <span class="lookup-val" style="color:${blocked ? 'var(--red)' : 'var(--green)'}">${blocked ? 'Block' : 'Allow'}</span>
+              </div>
+            </div>`;
+        } catch(e) {
+            res.innerHTML = '<div class="msg err">' + esc(e.error || 'Lookup failed') + '</div>';
+        }
+    }
 
-load();setInterval(load,5000);
-</script></body></html>
-
+    load();
+    setInterval(load, 10000);
+</script>
+</body>
+</html>

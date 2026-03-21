@@ -1,208 +1,583 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Anti-Bot</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#07080f;--card:#121425;--input:#161830;--border:rgba(255,255,255,.06);--text:#e4e6f0;--dim:#8b8ea8;--muted:#555770;--accent:#22d3a7;--blue:#3b82f6;--red:#f43f5e;--amber:#f59e0b;--green:#22c55e;--r:10px;--font:'Inter',system-ui,sans-serif}
-[data-theme="midnight"]{--bg:#0a0a0f;--card:#161620;--input:#1c1c28;--border:rgba(255,255,255,.05);--text:#d8d8e8;--dim:#7878a0;--muted:#505068;--accent:#818cf8}
-[data-theme="nord"]{--bg:#2e3440;--card:#434c5e;--input:#4c566a;--border:rgba(216,222,233,.08);--text:#eceff4;--dim:#d8dee9;--muted:#a0aec0;--accent:#88c0d0;--blue:#81a1c1;--red:#bf616a;--amber:#ebcb8b;--green:#a3be8c}
-[data-theme="emerald"]{--bg:#041210;--card:#0c2620;--input:#103028;--border:rgba(34,197,94,.08);--text:#d4f0e0;--dim:#6cc898;--muted:#3a7858;--accent:#34d399;--blue:#2dd4bf}
-[data-theme="light"]{--bg:#f5f6fa;--card:#ffffff;--input:#f0f1f5;--border:rgba(0,0,0,.08);--text:#1a1a2e;--dim:#555770;--muted:#8b8ea8;--accent:#0d9373;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--green:#16a34a}
-[data-theme="rose"]{--bg:#120a0d;--card:#22161c;--input:#2a1c24;--border:rgba(244,63,94,.06);--text:#f0dce4;--dim:#b07888;--muted:#704858;--accent:#fb7185;--blue:#e879f9}
-body{font-family:var(--font);background:var(--bg);color:var(--text);padding:20px;font-size:13px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
-.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
-.stat .v{font-size:18px;font-weight:700;margin-top:2px}
-.v.red{color:var(--red)}.v.green{color:var(--green)}.v.accent{color:var(--accent)}.v.amber{color:var(--amber)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
-.card h3{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-canvas{width:100%;height:80px}
-.bar{padding:9px 12px;border-radius:var(--r);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.bar.atk{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
-.bar.ok{background:rgba(34,197,94,.08);color:var(--green);border:1px solid rgba(34,197,94,.15)}
-.bar .dot{width:7px;height:7px;border-radius:50%;animation:p 1.5s infinite}
-.bar.atk .dot{background:var(--red)}.bar.ok .dot{background:var(--green)}
-@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
-.tog{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px}
-.sw{position:relative;width:32px;height:18px;cursor:pointer;display:inline-block}
-.sw input{display:none}
-.sw .tr{position:absolute;inset:0;background:#1f2242;border-radius:18px;transition:.2s;border:1px solid var(--border)}
-.sw .tr::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
-.sw input:checked+.tr{background:var(--accent);border-color:var(--accent)}
-.sw input:checked+.tr::before{transform:translateX(14px);background:#fff}
-.field{margin-bottom:8px}
-.field label{display:block;font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.field input{width:100%;padding:6px 10px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:12px}
-.field input:focus{outline:none;border-color:var(--accent)}
-.row{display:flex;gap:8px}.row .field{flex:1}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .12s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.p{background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;border:none}
-.btn.d{color:var(--red)}.btn.d:hover{border-color:var(--red)}
-.btn.sm{padding:3px 8px;font-size:10px}
-.msg{padding:6px 10px;border-radius:6px;font-size:11px;margin-top:6px;display:none}
-.msg.ok{display:block;background:rgba(34,197,94,.08);color:var(--green)}
-.msg.err{display:block;background:rgba(244,63,94,.08);color:var(--red)}
-.ip-list{max-height:140px;overflow-y:auto}
-.ip-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;font-family:monospace}
-.ip-row:last-child{border:none}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:700px){.cols{grid-template-columns:1fr}}
-</style></head><body>
-<div id="root">Loading...</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti-Bot — IntegrityPolygon</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font:   "IBM Plex Sans", system-ui, sans-serif;
+            --mono:   "IBM Plex Mono", Consolas, monospace;
+            --bg:     #090b10;
+            --surface:#0e1118;
+            --card:   #121722;
+            --input:  #0c1018;
+            --hover:  #181f2e;
+            --active: #1e2738;
+            --border: rgba(80,110,150,.22);
+            --bhl:    rgba(110,150,200,.38);
+            --text:   #d0ecde;
+            --dim:    #5fa882;
+            --muted:  #30604a;
+            --accent: #34d399;
+            --adim:   rgba(52,211,153,.1);
+            --blue:   #2dd4bf;
+            --bdim:   rgba(45,212,191,.1);
+            --red:    #ef4444;
+            --rdim:   rgba(239,68,68,.1);
+            --amber:  #f59e0b;
+            --adimamb:rgba(245,158,11,.1);
+            --green:  #34d399;
+            --gdim:   rgba(52,211,153,.12);
+            --r: 3px;
+        }
+        [data-theme="midnight"]{--bg:#0f1016;--surface:#14161f;--card:#1a1e2c;--input:#1e2230;--hover:#242a3a;--active:#2c3348;--border:rgba(110,125,160,.2);--bhl:rgba(140,158,200,.36);--text:#e2e6f5;--dim:#96a0bf;--muted:#667088;--accent:#7d8bff;--adim:rgba(125,139,255,.1);--blue:#58a2ff;--bdim:rgba(88,162,255,.1);--red:#ef5b67;--rdim:rgba(239,91,103,.1);--amber:#f3a83b;--adimamb:rgba(243,168,59,.1);--green:#22d3a7;--gdim:rgba(34,211,167,.12)}
+        [data-theme="nord"]{--bg:#2e3440;--surface:#373e4e;--card:#3f4758;--input:#464f62;--hover:#505a6e;--active:#5a6578;--border:rgba(200,210,228,.14);--bhl:rgba(210,220,235,.28);--text:#eceff4;--dim:#cad0de;--muted:#9aa5bc;--accent:#88c0d0;--adim:rgba(136,192,208,.12);--blue:#81a1c1;--bdim:rgba(129,161,193,.12);--red:#bf616a;--rdim:rgba(191,97,106,.12);--amber:#ebcb8b;--adimamb:rgba(235,203,139,.1);--green:#a3be8c;--gdim:rgba(163,190,140,.14)}
+        [data-theme="emerald"]{--bg:#051612;--surface:#091e18;--card:#0f2820;--input:#133228;--hover:#193c30;--active:#204838;--border:rgba(60,120,95,.24);--bhl:rgba(90,160,128,.36);--text:#d8f0e6;--dim:#8ec8b0;--muted:#5a9878;--accent:#34d399;--adim:rgba(52,211,153,.12);--blue:#2dd4bf;--bdim:rgba(45,212,191,.12);--red:#f87171;--rdim:rgba(248,113,113,.12);--amber:#fbbf24;--adimamb:rgba(251,191,36,.1);--green:#22c55e;--gdim:rgba(34,197,94,.12)}
+        [data-theme="rose"]{--bg:#120a0d;--surface:#180f14;--card:#1e1419;--input:#241820;--hover:#2c1e28;--active:#342430;--border:rgba(200,50,80,.1);--bhl:rgba(240,80,110,.2);--text:#eedce4;--dim:#a87088;--muted:#684858;--accent:#fb7185;--adim:rgba(251,113,133,.1);--blue:#e879f9;--bdim:rgba(232,121,249,.1);--red:#fb7185;--rdim:rgba(251,113,133,.1);--amber:#f59e0b;--adimamb:rgba(245,158,11,.1);--green:#22c55e;--gdim:rgba(34,197,94,.1)}
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: transparent;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        #app { padding: 16px; }
+
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+        .fade-in  { animation: fadeIn  .22s ease both; }
+        .slide-up { animation: slideUp .28s ease both; }
+
+        /* ── Status banner ── */
+        .status-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 13px; border-radius: var(--r);
+            border: 1px solid; font-size: 11px; font-family: var(--mono);
+            font-weight: 600; margin-bottom: 10px; letter-spacing: .2px;
+        }
+        .status-bar.ok  { background: var(--gdim);    color: var(--green); border-color: rgba(52,211,153,.2); }
+        .status-bar.atk { background: var(--rdim);    color: var(--red);   border-color: rgba(239,68,68,.2);  }
+        .status-dot {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+            animation: pulse 1.5s infinite;
+        }
+        .status-bar.ok  .status-dot { background: var(--green); }
+        .status-bar.atk .status-dot { background: var(--red); }
+
+        /* ── Stat grid ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 1px; margin-bottom: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--border);
+            overflow: hidden;
+        }
+        .stat-cell { background: var(--card); padding: 11px 13px; }
+        .stat-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.1px; color: var(--muted); font-family: var(--mono);
+        }
+        .stat-value {
+            font-size: 20px; font-weight: 700; font-family: var(--mono);
+            letter-spacing: -.5px; line-height: 1.2; margin-top: 3px;
+        }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.green  { color: var(--green); }
+        .stat-value.red    { color: var(--red); }
+        .stat-value.amber  { color: var(--amber); }
+        .stat-value.blue   { color: var(--blue); }
+
+        /* ── Chart panel ── */
+        .chart-panel {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--r); overflow: hidden; margin-bottom: 10px;
+        }
+        .chart-panel-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 13px 14px 0;
+        }
+        .chart-panel-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted); font-family: var(--mono);
+        }
+        .chart-panel-value {
+            font-size: 22px; font-weight: 700; font-family: var(--mono);
+            letter-spacing: -.6px; padding: 2px 14px 8px; line-height: 1.2;
+            color: var(--blue);
+        }
+        .chart-canvas-wrap { position: relative; height: 80px; }
+        .chart-canvas-wrap canvas { width: 100%; height: 80px; display: block; }
+
+        /* ── Layout ── */
+        .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.3px; color: var(--muted); font-family: var(--mono);
+            margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+        }
+        .card-title svg { width: 13px; height: 13px; stroke: var(--muted); fill: none; stroke-width: 2; }
+
+        /* ── Toggle rows ── */
+        .tog-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 0; border-bottom: 1px solid var(--border); gap: 12px;
+        }
+        .tog-row:last-of-type { border-bottom: none; }
+        .tog-info { flex: 1; min-width: 0; }
+        .tog-name  { font-size: 12px; color: var(--text); font-weight: 500; }
+        .tog-desc  { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+
+        /* ── Switch ── */
+        .sw { position: relative; width: 32px; height: 18px; cursor: pointer; display: inline-block; flex-shrink: 0; }
+        .sw input { display: none; }
+        .sw .track { position: absolute; inset: 0; background: var(--active); border-radius: 18px; transition: .18s; border: 1px solid var(--border); }
+        .sw .track::before { content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .18s; }
+        .sw input:checked + .track { background: var(--accent); border-color: var(--accent); }
+        .sw input:checked + .track::before { transform: translateX(14px); background: #fff; }
+
+        /* ── Field ── */
+        .field { margin-bottom: 9px; }
+        .field label {
+            display: block; font-size: 9px; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: var(--mono);
+        }
+        .field input {
+            width: 100%; padding: 6px 10px;
+            background: var(--input); border: 1px solid var(--border);
+            border-radius: var(--r); color: var(--text);
+            font-family: var(--mono); font-size: 12px; transition: border-color .15s;
+        }
+        .field input:focus { outline: none; border-color: var(--accent); }
+        .field input::placeholder { color: var(--muted); }
+
+        /* ── Section heading inside card ── */
+        .section-head {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--muted); font-family: var(--mono);
+            padding-bottom: 7px; margin-bottom: 10px; margin-top: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-head:first-child { margin-top: 0; }
+
+        /* ── Two-col field row ── */
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .field-row .field { margin-bottom: 0; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 6px 12px; font-size: 10px; font-weight: 700;
+            border-radius: var(--r); border: 1px solid var(--border);
+            background: var(--input); color: var(--dim); cursor: pointer;
+            transition: all .1s; font-family: var(--mono); letter-spacing: .4px;
+            text-transform: uppercase; white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--bhl); color: var(--text); background: var(--hover); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .btn.primary { background: var(--accent); color: #0a1a12; border-color: var(--accent); }
+        .btn.primary:hover { opacity: .88; }
+        .btn.danger { color: var(--red); }
+        .btn.danger:hover { border-color: var(--red); color: var(--red); background: var(--rdim); }
+        .btn.sm { padding: 3px 8px; font-size: 9px; }
+        .btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .input-row .field { margin: 0; flex: 1; }
+
+        .msg { padding: 6px 10px; border-radius: var(--r); font-size: 11px; font-family: var(--mono); margin-top: 8px; display: none; }
+        .msg.ok  { display: block; background: var(--gdim); color: var(--green); border: 1px solid rgba(52,211,153,.2); }
+        .msg.err { display: block; background: var(--rdim); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+
+        /* ── IP list ── */
+        .entry-list { max-height: 180px; overflow-y: auto; }
+        .entry-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 11px;
+        }
+        .entry-row:last-child { border-bottom: none; }
+        .entry-val { font-family: var(--mono); color: var(--dim); }
+
+        /* ── Proto note ── */
+        .field-note { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 3px; }
+
+        .no-data { color: var(--muted); padding: 24px 0; text-align: center; font-family: var(--mono); font-size: 11px; }
+        .inline-flex { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+<div id="app"><div style="color:var(--muted);padding:32px 16px;text-align:center;font-family:var(--mono);font-size:12px">Loading anti-bot data…</div></div>
+
 <script>
-// ── Theme sync ──
-(function(){
-  const p=new URLSearchParams(location.search),t=p.get('theme');
-  if(t&&t!=='default')document.documentElement.setAttribute('data-theme',t);
-  window.addEventListener('message',function(e){
-    if(e.data&&e.data.type==='ip-theme-change'){
-      const th=e.data.theme;
-      if(!th||th==='default')document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme',th);
+    (function(){
+        const p = new URLSearchParams(location.search), t = p.get('theme');
+        if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
+        window.addEventListener('message', function(e){
+            if (e.data && e.data.type === 'ip-theme-change') {
+                const th = e.data.theme;
+                if (!th || th === 'default') document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', th);
+            }
+        });
+    })();
+
+    const API = location.origin;
+    let rateData    = [];
+    let initialized = false;
+    let firstRender = true;
+
+    const TOGGLES = [
+        ['enable_rate_limit',          'Rate Limiting',           'Max connections per IP in time window'],
+        ['enable_cooldown',            'Connection Cooldown',     'Minimum delay between connections from same IP'],
+        ['enable_spam_detection',      'Spam Login Detection',    'Block rapid re-login attempts from same IP/username'],
+        ['enable_flood_detection',     'Flood Join Detection',    'Detect burst of unique IPs joining simultaneously'],
+        ['enable_name_filter',         'Bot Name Filter',         'Block usernames matching bot patterns + entropy check'],
+        ['enable_handshake_validation','Handshake Validation',    'Validate Minecraft protocol version on connect'],
+        ['enable_syn_flood_detection', 'SYN Flood Detection',     'Detect connections that never complete login'],
+        ['enable_dynamic_blocking',    'Dynamic Blocking',        'Escalating bans based on threat score accumulation'],
+        ['enable_lockdown',            'Lockdown Mode',           'Only allow known players during active attack'],
+    ];
+
+    async function api(path, opts = {}) {
+        const h = { 'Content-Type': 'application/json' };
+        const r = await fetch(API + '/api/modules/anti-bot/' + path, { ...opts, headers: h, credentials: 'same-origin' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw d;
+        return d;
     }
-  });
-})();
-const API=location.origin,root=document.getElementById('root');
-async function api(p,o={}){const h={'Content-Type':'application/json',...(o.headers||{})};const r=await fetch(API+'/api/modules/anti-bot/'+p,{...o,headers:h,credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok)throw d;return d}
-let rateData=[], initialized=false;
+    function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+    function fa() { return firstRender ? ' fade-in' : ''; }
+    function su() { return firstRender ? ' slide-up' : ''; }
 
-const TOGGLES=[
-['enable_rate_limit','Rate Limiting','Max connections per IP in time window'],
-['enable_cooldown','Connection Cooldown','Minimum delay between connections from same IP'],
-['enable_spam_detection','Spam Login Detection','Block rapid re-login attempts from same IP/username'],
-['enable_flood_detection','Flood Join Detection','Detect burst of unique IPs joining simultaneously'],
-['enable_name_filter','Bot Name Filter','Block usernames matching bot patterns + entropy check'],
-['enable_handshake_validation','Handshake Validation','Validate Minecraft protocol version on connect'],
-['enable_syn_flood_detection','SYN Flood Detection','Detect connections that never complete login'],
-['enable_dynamic_blocking','Dynamic Blocking','Escalating bans based on threat score accumulation'],
-['enable_lockdown','Lockdown Mode','Only allow known players during active attack'],
-];
-
-async function load(){
-  try{
-    const[s,r]=await Promise.all([api('status'),api('rates')]);
-    rateData=r.rates||[];
-    if(!initialized){
-      const[c,w]=await Promise.all([api('config'),api('whitelist')]);
-      renderFull(s,c,w.ips||[]);
-      initialized=true;
-    }else{
-      // Skip live update if user is editing a form field
-      if(!document.activeElement || !document.activeElement.closest('.card')) {
-        updateLive(s);
-      } else {
-        // Only update stats and chart, not config areas
-        updateStatsOnly(s);
-      }
+    async function load() {
+        try {
+            const [s, r] = await Promise.all([api('status'), api('rates')]);
+            rateData = r.rates || [];
+            if (!initialized) {
+                const [c, w] = await Promise.all([api('config'), api('whitelist')]);
+                renderFull(s, c, w.ips || []);
+                initialized = true;
+            } else {
+                if (!document.activeElement || !document.activeElement.closest('.card')) {
+                    updateLive(s);
+                } else {
+                    updateStatsOnly(s);
+                }
+            }
+        } catch(e) {
+            if (!initialized) document.getElementById('app').innerHTML =
+                '<div style="color:var(--red);padding:32px;text-align:center;font-family:var(--mono)">' + esc(e.error || e.message || 'Unknown error') + '</div>';
+        }
+        firstRender = false;
     }
-  }catch(e){
-    if(!initialized) root.innerHTML='<div style="color:var(--red)">Error: '+(e.error||e.message||'unknown')+'</div>';
-  }
-}
 
-function renderFull(s,c,wl){
-root.innerHTML=`
-<div id="statusBar"></div>
-<div id="statsGrid"><div class="grid">
-<div class="stat"><div class="l">Join Rate</div><div class="v accent" id="vRate">${s.current_rate}/s</div></div>
-<div class="stat"><div class="l">Blocked</div><div class="v red" id="vBlocked">${s.total_blocked}</div></div>
-<div class="stat"><div class="l">Allowed</div><div class="v green" id="vAllowed">${s.total_allowed}</div></div>
-<div class="stat"><div class="l">Known Players</div><div class="v" id="vKnown">${s.known_players}</div></div>
-<div class="stat"><div class="l">Attacks</div><div class="v" id="vAttacks">${s.total_attacks}</div></div>
-<div class="stat"><div class="l">Dynamic Bans</div><div class="v" id="vBans">${s.dynamic_bans}</div></div>
-<div class="stat"><div class="l">SYN Floods</div><div class="v" id="vSyn">${s.syn_floods}</div></div>
-<div class="stat"><div class="l">Pending</div><div class="v" id="vPending">${s.pending_handshakes}</div></div>
-</div></div>
-<div class="card"><h3>Join Rate (2 min)</h3><canvas id="chart" height="80"></canvas></div>
-<div id="atkBtn"></div>
-<div class="cols">
-<div>
-<div class="card"><h3>Detection Modules</h3>
-${TOGGLES.map(([k,n,h])=>`<div class="tog"><div><span>${n}</span><br><span style="font-size:10px;color:var(--muted)">${h}</span></div><label class="sw"><input type="checkbox" data-k="${k}" ${c[k]?'checked':''}><span class="tr"></span></label></div>`).join('')}
+    function renderFull(s, c, wl) {
+        document.getElementById('app').innerHTML = `
+<div id="statusBar" class="${fa()}"></div>
+
+<div class="stat-grid${fa()}">
+  <div class="stat-cell"><div class="stat-label">Join Rate</div><div class="stat-value blue" id="vRate">${s.current_rate}/s</div></div>
+  <div class="stat-cell"><div class="stat-label">Blocked</div><div class="stat-value red" id="vBlocked">${s.total_blocked}</div></div>
+  <div class="stat-cell"><div class="stat-label">Allowed</div><div class="stat-value green" id="vAllowed">${s.total_allowed}</div></div>
+  <div class="stat-cell"><div class="stat-label">Known Players</div><div class="stat-value" id="vKnown">${s.known_players}</div></div>
+  <div class="stat-cell"><div class="stat-label">Attacks</div><div class="stat-value${s.total_attacks > 0 ? ' amber' : ''}" id="vAttacks">${s.total_attacks}</div></div>
+  <div class="stat-cell"><div class="stat-label">Dynamic Bans</div><div class="stat-value${s.dynamic_bans > 0 ? ' red' : ''}" id="vBans">${s.dynamic_bans}</div></div>
+  <div class="stat-cell"><div class="stat-label">SYN Floods</div><div class="stat-value${s.syn_floods > 0 ? ' amber' : ''}" id="vSyn">${s.syn_floods}</div></div>
+  <div class="stat-cell"><div class="stat-label">Pending</div><div class="stat-value" id="vPending">${s.pending_handshakes}</div></div>
 </div>
-<div class="card"><h3>IP Whitelist</h3>
-<div class="row" style="margin-bottom:8px"><div class="field" style="margin:0"><input id="wlIp" placeholder="e.g. 192.168.1.1"></div><button class="btn" onclick="addWl()">Add</button></div>
-<div class="ip-list" id="wlList">${renderWl(wl)}</div>
+
+<div class="chart-panel${fa()}">
+  <div class="chart-panel-header">
+    <div class="chart-panel-title">Join Rate — 2 min window</div>
+  </div>
+  <div class="chart-panel-value" id="cvRate">${s.current_rate}<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:3px">joins/s</span></div>
+  <div class="chart-canvas-wrap">
+    <canvas id="rateChart"></canvas>
+  </div>
 </div>
-</div>
-<div>
-<div class="card"><h3>Rate Limiting</h3>
-<div class="row"><div class="field"><label>Max Conn / IP</label><input id="cRate" type="number" value="${c.max_conn_per_ip}"></div><div class="field"><label>Window (sec)</label><input id="cWin" type="number" value="${c.conn_window_sec}"></div></div>
-<div class="row"><div class="field"><label>Cooldown (ms)</label><input id="cCool" type="number" value="${c.cooldown_ms}"></div><div class="field"><label>Flood Threshold (/s)</label><input id="cFlood" type="number" value="${c.global_join_threshold}"></div></div>
-<div class="field"><label>Attack Cooldown (sec)</label><input id="cAtkCool" type="number" value="${c.attack_cooldown_sec}"></div>
-</div>
-<div class="card"><h3>Bot Heuristics</h3>
-<div class="field"><label>Bot Name Regex</label><input id="cRegex" value="${esc(c.bot_name_regex)}"></div>
-<div class="field"><label>Name Entropy Threshold</label><input id="cEntropy" type="number" step="0.1" value="${c.name_entropy_threshold}"></div>
-</div>
-<div class="card"><h3>Dynamic Blocking</h3>
-<div class="row"><div class="field"><label>Threat Score Threshold</label><input id="cThreat" type="number" value="${c.threat_score_threshold}"></div><div class="field"><label>SYN Timeout (ms)</label><input id="cSyn" type="number" value="${c.syn_timeout_ms}"></div></div>
-<div class="row"><div class="field"><label>Base Ban (sec)</label><input id="cBanBase" type="number" value="${c.dynamic_block_base_sec}"></div><div class="field"><label>Max Ban (sec)</label><input id="cBanMax" type="number" value="${c.dynamic_block_max_sec}"></div></div>
-</div>
-<div class="card"><h3>Handshake Protocol</h3>
-<div class="row"><div class="field"><label>Min Protocol Version</label><input id="cProtoMin" type="number" value="${c.min_protocol_version||47}"></div><div class="field"><label>Max Protocol Version</label><input id="cProtoMax" type="number" value="${c.max_protocol_version||99999}"></div></div>
-<div style="font-size:10px;color:var(--muted);margin-top:2px">MC 1.8 = 47, MC 1.21.x = 770. Set max to 99999 for future-proof.</div>
-</div>
-<div class="card"><h3>Messages</h3>
-<div class="field"><label>Kick Message</label><input id="cKick" value="${esc(c.kick_message)}"></div>
-<div class="field"><label>Lockdown Message</label><input id="cLock" value="${esc(c.lockdown_message)}"></div>
-</div>
-<button class="btn p" onclick="saveConfig()">Save Configuration</button>
-<div id="saveMsg" class="msg"></div>
-</div>
+
+<div id="atkActions"></div>
+
+<div class="cols${su()}">
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Detection Modules
+      </div>
+      ${TOGGLES.map(([k, n, d]) => `
+      <div class="tog-row">
+        <div class="tog-info">
+          <div class="tog-name">${n}</div>
+          <div class="tog-desc">${d}</div>
+        </div>
+        <label class="sw"><input type="checkbox" data-k="${k}" ${c[k] ? 'checked' : ''}><span class="track"></span></label>
+      </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        IP Whitelist
+      </div>
+      <div class="input-row" style="margin-bottom:10px">
+        <div class="field"><input id="wlIp" placeholder="e.g. 192.168.1.1"></div>
+        <button class="btn" onclick="addWl()">Add</button>
+      </div>
+      <div class="entry-list" id="wlList">${renderWl(wl)}</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Configuration
+      </div>
+
+      <div class="section-head">Rate Limiting</div>
+      <div class="field-row" style="margin-bottom:8px">
+        <div class="field"><label>Max Conn / IP</label><input id="cRate" type="number" value="${c.max_conn_per_ip}"></div>
+        <div class="field"><label>Window (sec)</label><input id="cWin" type="number" value="${c.conn_window_sec}"></div>
+      </div>
+      <div class="field-row" style="margin-bottom:8px">
+        <div class="field"><label>Cooldown (ms)</label><input id="cCool" type="number" value="${c.cooldown_ms}"></div>
+        <div class="field"><label>Flood Threshold /s</label><input id="cFlood" type="number" value="${c.global_join_threshold}"></div>
+      </div>
+      <div class="field"><label>Attack Cooldown (sec)</label><input id="cAtkCool" type="number" value="${c.attack_cooldown_sec}"></div>
+
+      <div class="section-head">Bot Heuristics</div>
+      <div class="field"><label>Bot Name Regex</label><input id="cRegex" value="${esc(c.bot_name_regex)}"></div>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field"><label>Name Entropy Threshold</label><input id="cEntropy" type="number" step="0.1" value="${c.name_entropy_threshold}"></div>
+        <div class="field"></div>
+      </div>
+
+      <div class="section-head">Dynamic Blocking</div>
+      <div class="field-row" style="margin-bottom:8px">
+        <div class="field"><label>Threat Score Threshold</label><input id="cThreat" type="number" value="${c.threat_score_threshold}"></div>
+        <div class="field"><label>SYN Timeout (ms)</label><input id="cSyn" type="number" value="${c.syn_timeout_ms}"></div>
+      </div>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field"><label>Base Ban (sec)</label><input id="cBanBase" type="number" value="${c.dynamic_block_base_sec}"></div>
+        <div class="field"><label>Max Ban (sec)</label><input id="cBanMax" type="number" value="${c.dynamic_block_max_sec}"></div>
+      </div>
+
+      <div class="section-head">Handshake Protocol</div>
+      <div class="field-row" style="margin-bottom:4px">
+        <div class="field"><label>Min Protocol Version</label><input id="cProtoMin" type="number" value="${c.min_protocol_version || 47}"></div>
+        <div class="field"><label>Max Protocol Version</label><input id="cProtoMax" type="number" value="${c.max_protocol_version || 99999}"></div>
+      </div>
+      <div class="field-note">MC 1.8 = 47 · MC 1.21.x = 770 · Set max to 99999 for future-proof</div>
+
+      <div class="section-head">Messages</div>
+      <div class="field"><label>Kick Message</label><input id="cKick" value="${esc(c.kick_message)}"></div>
+      <div class="field" style="margin-bottom:14px"><label>Lockdown Message</label><input id="cLock" value="${esc(c.lockdown_message)}"></div>
+
+      <button class="btn primary" onclick="saveConfig()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Configuration
+      </button>
+      <div id="saveMsg" class="msg"></div>
+    </div>
+  </div>
 </div>`;
-document.querySelectorAll('.sw input').forEach(el=>el.onchange=()=>saveToggle(el.dataset.k,el.checked));
-updateLive(s);
-}
 
-function updateLive(s){
-  updateStatsOnly(s);
-  const ab=document.getElementById('atkBtn');
-  if(ab){
-    const shouldShow=s.under_attack;
-    const hasBtn=ab.querySelector('button');
-    if(shouldShow&&!hasBtn) ab.innerHTML='<div style="margin-bottom:10px"><button class="btn d" onclick="clearAtk()">End Attack &amp; Clear</button></div>';
-    else if(!shouldShow&&hasBtn) ab.innerHTML='';
-  }
-  drawChart();
-}
-
-function updateStatsOnly(s){
-  // Status bar — only rewrite if state changed
-  const sb=document.getElementById('statusBar');
-  if(sb){
-    const isAtk=s.under_attack;
-    const bar=sb.querySelector('.bar');
-    const curAtk=bar&&bar.classList.contains('atk');
-    if(!bar||isAtk!==curAtk){
-      sb.innerHTML=`<div class="${isAtk?'bar atk':'bar ok'}"><div class="dot"></div><span id="statusText"></span></div>`;
+        document.querySelectorAll('.sw input[data-k]').forEach(el =>
+            el.onchange = () => saveToggle(el.dataset.k, el.checked)
+        );
+        updateLive(s);
     }
-    const txt=document.getElementById('statusText');
-    if(txt){
-      txt.textContent=isAtk?
-        'BOT ATTACK \u2014 '+s.current_rate+' joins/sec'+(s.attack_duration?' \u2014 '+s.attack_duration:'')+(s.lockdown_active?' \u2014 LOCKDOWN':'')
-        :'No active threats \u2014 monitoring '+s.tracked_ips+' IPs';
+
+    function updateLive(s) {
+        updateStatsOnly(s);
+        // Attack action button
+        const ab = document.getElementById('atkActions');
+        if (ab) {
+            const hasBtn = ab.querySelector('button');
+            if (s.under_attack && !hasBtn) {
+                ab.innerHTML = `<div style="margin-bottom:10px">
+                  <button class="btn danger" onclick="clearAtk()">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    End Attack &amp; Clear
+                  </button>
+                </div>`;
+            } else if (!s.under_attack && hasBtn) {
+                ab.innerHTML = '';
+            }
+        }
+        drawChart();
     }
-  }
-  // Stats — granular textContent updates
-  const ids={vRate:s.current_rate+'/s',vBlocked:s.total_blocked,vAllowed:s.total_allowed,vKnown:s.known_players,vAttacks:s.total_attacks,vBans:s.dynamic_bans,vSyn:s.syn_floods,vPending:s.pending_handshakes};
-  for(const[id,val]of Object.entries(ids)){const el=document.getElementById(id);if(el)el.textContent=val;}
-  // Update color classes
-  const vA=document.getElementById('vAttacks');if(vA)vA.className=s.total_attacks>0?'v amber':'v';
-  const vB=document.getElementById('vBans');if(vB)vB.className=s.dynamic_bans>0?'v red':'v';
-  const vS=document.getElementById('vSyn');if(vS)vS.className=s.syn_floods>0?'v amber':'v';
-}
 
-function renderWl(wl){return wl.length?wl.map(ip=>`<div class="ip-row"><span>${esc(ip)}</span><button class="btn sm d" onclick="rmWl('${esc(ip)}')">Remove</button></div>`).join(''):'<div style="color:var(--muted);font-size:11px">No whitelisted IPs</div>'}
+    function updateStatsOnly(s) {
+        // Status bar — only rebuild if attack state changed
+        const sb = document.getElementById('statusBar');
+        if (sb) {
+            const isAtk   = s.under_attack;
+            const bar     = sb.querySelector('.status-bar');
+            const curAtk  = bar && bar.classList.contains('atk');
+            if (!bar || isAtk !== curAtk) {
+                sb.innerHTML = `<div class="status-bar ${isAtk ? 'atk' : 'ok'}">
+                  <div class="status-dot"></div>
+                  <span id="statusText"></span>
+                </div>`;
+            }
+            const txt = document.getElementById('statusText');
+            if (txt) {
+                txt.textContent = isAtk
+                    ? 'BOT ATTACK — ' + s.current_rate + ' joins/sec'
+                    + (s.attack_duration ? ' — ' + s.attack_duration : '')
+                    + (s.lockdown_active ? ' — LOCKDOWN' : '')
+                    : 'No active threats — monitoring ' + s.tracked_ips + ' IPs';
+            }
+        }
+        // Stats
+        const patch = (id, val, cls) => {
+            const el = document.getElementById(id); if (!el) return;
+            el.textContent = String(val);
+            if (cls !== undefined) el.className = cls;
+        };
+        patch('vRate',     s.current_rate + '/s');
+        patch('vBlocked',  s.total_blocked);
+        patch('vAllowed',  s.total_allowed);
+        patch('vKnown',    s.known_players);
+        patch('vAttacks',  s.total_attacks,  'stat-value' + (s.total_attacks  > 0 ? ' amber' : ''));
+        patch('vBans',     s.dynamic_bans,   'stat-value' + (s.dynamic_bans   > 0 ? ' red'   : ''));
+        patch('vSyn',      s.syn_floods,     'stat-value' + (s.syn_floods     > 0 ? ' amber' : ''));
+        patch('vPending',  s.pending_handshakes);
+        const cv = document.getElementById('cvRate');
+        if (cv) cv.firstChild.textContent = s.current_rate;
+    }
 
-function drawChart(){const cv=document.getElementById('chart');if(!cv||rateData.length<2)return;const c=cv.getContext('2d');const w=cv.parentElement.clientWidth-28,h=80;cv.width=w*2;cv.height=h*2;cv.style.width=w+'px';cv.style.height=h+'px';c.scale(2,2);c.clearRect(0,0,w,h);const mx=Math.max(...rateData,5),p=4,gw=w-p*2,gh=h-p*2;c.strokeStyle='rgba(255,255,255,.04)';c.lineWidth=1;for(let i=0;i<5;i++){const y=p+gh*(i/4);c.beginPath();c.moveTo(p,y);c.lineTo(p+gw,y);c.stroke()}c.beginPath();rateData.forEach((v,i)=>{const x=p+(i/(rateData.length-1))*gw,y=p+gh*(1-v/mx);i===0?c.moveTo(x,y):c.lineTo(x,y)});c.lineTo(p+gw,p+gh);c.lineTo(p,p+gh);c.closePath();const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(59,130,246,.25)');g.addColorStop(1,'rgba(59,130,246,.02)');c.fillStyle=g;c.fill();c.beginPath();rateData.forEach((v,i)=>{const x=p+(i/(rateData.length-1))*gw,y=p+gh*(1-v/mx);i===0?c.moveTo(x,y):c.lineTo(x,y)});c.strokeStyle='#3b82f6';c.lineWidth=2;c.stroke()}
+    function renderWl(wl) {
+        if (!wl.length) return '<div class="no-data">No whitelisted IPs</div>';
+        return wl.map(ip =>
+            `<div class="entry-row">
+              <span class="entry-val">${esc(ip)}</span>
+              <button class="btn sm danger" onclick="rmWl('${esc(ip)}')">Remove</button>
+            </div>`
+        ).join('');
+    }
 
-async function saveToggle(k,v){try{await api('config',{method:'POST',body:JSON.stringify({[k]:v})})}catch(e){alert(e.error||'Failed')}}
-async function saveConfig(){const msg=document.getElementById('saveMsg');try{await api('config',{method:'POST',body:JSON.stringify({max_conn_per_ip:+document.getElementById('cRate').value,conn_window_sec:+document.getElementById('cWin').value,cooldown_ms:+document.getElementById('cCool').value,global_join_threshold:+document.getElementById('cFlood').value,attack_cooldown_sec:+document.getElementById('cAtkCool').value,bot_name_regex:document.getElementById('cRegex').value,name_entropy_threshold:+document.getElementById('cEntropy').value,threat_score_threshold:+document.getElementById('cThreat').value,syn_timeout_ms:+document.getElementById('cSyn').value,dynamic_block_base_sec:+document.getElementById('cBanBase').value,dynamic_block_max_sec:+document.getElementById('cBanMax').value,min_protocol_version:+document.getElementById('cProtoMin').value,max_protocol_version:+document.getElementById('cProtoMax').value,kick_message:document.getElementById('cKick').value,lockdown_message:document.getElementById('cLock').value})});msg.className='msg ok';msg.textContent='Saved'}catch(e){msg.className='msg err';msg.textContent=e.error||'Failed'}}
-async function addWl(){const ip=document.getElementById('wlIp').value.trim();if(!ip)return;try{await api('whitelist/add',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlList').innerHTML=renderWl(w.ips||[]);document.getElementById('wlIp').value=''}catch(e){alert(e.error||'Failed')}}
-async function rmWl(ip){try{await api('whitelist/remove',{method:'POST',body:JSON.stringify({ip})});const w=await api('whitelist');document.getElementById('wlList').innerHTML=renderWl(w.ips||[])}catch(e){alert(e.error||'Failed')}}
-async function clearAtk(){try{await api('clear',{method:'POST'});const s=await api('status');updateLive(s)}catch(e){alert(e.error||'Failed')}}
-function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'):''}
-load();setInterval(load,5000);
-</script></body></html>
+    function drawChart() {
+        const cv = document.getElementById('rateChart');
+        if (!cv || rateData.length < 2) return;
+        const c = cv.getContext('2d');
+        const w = cv.parentElement.clientWidth;
+        const h = 80;
+        cv.width = w * 2; cv.height = h * 2;
+        cv.style.width = w + 'px'; cv.style.height = h + 'px';
+        c.scale(2, 2);
+        c.clearRect(0, 0, w, h);
+
+        const mx = Math.max(...rateData, 5);
+        const p = 4, gw = w - p * 2, gh = h - p * 2;
+
+        // Grid lines
+        c.strokeStyle = 'rgba(45,212,191,.08)';
+        c.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const y = p + gh * (i / 3);
+            c.beginPath(); c.moveTo(p, y); c.lineTo(p + gw, y); c.stroke();
+        }
+
+        // Area fill
+        c.beginPath();
+        rateData.forEach((v, i) => {
+            const x = p + (i / (rateData.length - 1)) * gw;
+            const y = p + gh * (1 - v / mx);
+            i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+        });
+        c.lineTo(p + gw, p + gh); c.lineTo(p, p + gh); c.closePath();
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, 'rgba(45,212,191,.18)');
+        g.addColorStop(1, 'rgba(45,212,191,.01)');
+        c.fillStyle = g; c.fill();
+
+        // Line
+        c.beginPath();
+        rateData.forEach((v, i) => {
+            const x = p + (i / (rateData.length - 1)) * gw;
+            const y = p + gh * (1 - v / mx);
+            i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+        });
+        c.strokeStyle = 'var(--blue)';
+        c.lineWidth = 1.5; c.stroke();
+    }
+
+    async function saveToggle(k, v) {
+        try { await api('config', { method: 'POST', body: JSON.stringify({ [k]: v }) }); }
+        catch(e) { alert(e.error || 'Failed'); }
+    }
+
+    async function saveConfig() {
+        const msg = document.getElementById('saveMsg');
+        try {
+            await api('config', { method: 'POST', body: JSON.stringify({
+                    max_conn_per_ip:          +document.getElementById('cRate').value,
+                    conn_window_sec:          +document.getElementById('cWin').value,
+                    cooldown_ms:              +document.getElementById('cCool').value,
+                    global_join_threshold:    +document.getElementById('cFlood').value,
+                    attack_cooldown_sec:      +document.getElementById('cAtkCool').value,
+                    bot_name_regex:           document.getElementById('cRegex').value,
+                    name_entropy_threshold:   +document.getElementById('cEntropy').value,
+                    threat_score_threshold:   +document.getElementById('cThreat').value,
+                    syn_timeout_ms:           +document.getElementById('cSyn').value,
+                    dynamic_block_base_sec:   +document.getElementById('cBanBase').value,
+                    dynamic_block_max_sec:    +document.getElementById('cBanMax').value,
+                    min_protocol_version:     +document.getElementById('cProtoMin').value,
+                    max_protocol_version:     +document.getElementById('cProtoMax').value,
+                    kick_message:             document.getElementById('cKick').value,
+                    lockdown_message:         document.getElementById('cLock').value,
+                })});
+            msg.className = 'msg ok'; msg.textContent = 'Configuration saved';
+        } catch(e) { msg.className = 'msg err'; msg.textContent = e.error || 'Failed'; }
+    }
+
+    async function addWl() {
+        const ip = document.getElementById('wlIp').value.trim(); if (!ip) return;
+        try {
+            await api('whitelist/add', { method: 'POST', body: JSON.stringify({ ip }) });
+            const w = await api('whitelist');
+            document.getElementById('wlList').innerHTML = renderWl(w.ips || []);
+            document.getElementById('wlIp').value = '';
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
+
+    async function rmWl(ip) {
+        try {
+            await api('whitelist/remove', { method: 'POST', body: JSON.stringify({ ip }) });
+            const w = await api('whitelist');
+            document.getElementById('wlList').innerHTML = renderWl(w.ips || []);
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
+
+    async function clearAtk() {
+        try {
+            await api('clear', { method: 'POST' });
+            const s = await api('status');
+            updateLive(s);
+        } catch(e) { alert(e.error || 'Failed'); }
+    }
+
+    load();
+    setInterval(load, 10000);
+    window.addEventListener('resize', drawChart);
+</script>
+</body>
+</html>

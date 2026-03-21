@@ -112,7 +112,8 @@ public class ModuleRoutes {
                 moduleManager.loadModule(jarFile);
             } catch (Exception ignored) {}
         }
-        ctx.json(Map.of("success", true, "message", id + " enabled"));
+        boolean loaded = moduleManager.getLoadedModules().containsKey(id);
+        ctx.json(Map.of("success", true, "message", id + (loaded ? " enabled" : " enabled (will load on restart)")));
     }
 
     /** POST /api/modules/{id}/disable */
@@ -151,7 +152,11 @@ public class ModuleRoutes {
                     }
                     if (realId.equalsIgnoreCase(id)) {
                         moduleManager.loadModule(jar);
-                        ctx.json(Map.of("success", true, "message", id + " loaded"));
+                        if (moduleManager.getLoadedModules().containsKey(realId)) {
+                            ctx.json(Map.of("success", true, "message", id + " loaded"));
+                        } else {
+                            ctx.status(409).json(Map.of("error", "Module is disabled: " + id));
+                        }
                         return;
                     }
                 } catch (Exception e) {
@@ -159,7 +164,11 @@ public class ModuleRoutes {
                     if (jar.getName().replace(".jar", "").equalsIgnoreCase(id)) {
                         try {
                             moduleManager.loadModule(jar);
-                            ctx.json(Map.of("success", true, "message", id + " loaded"));
+                            if (moduleManager.getLoadedModules().containsKey(id)) {
+                                ctx.json(Map.of("success", true, "message", id + " loaded"));
+                            } else {
+                                ctx.status(409).json(Map.of("error", "Module is disabled: " + id));
+                            }
                             return;
                         } catch (Exception ex) {
                             ctx.status(500).json(Map.of("error", "Failed to load: " + ex.getMessage()));

@@ -609,6 +609,7 @@
   const $ = s => document.querySelector(s);
   const app = $('#app');
 
+  let token = localStorage.getItem('ip_token');
   let ws = null;
   let currentUser = null;
   let curPage = 'overview';
@@ -633,6 +634,7 @@
 
   async function api(path, opts = {}) {
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
     try {
       const res = await fetch(API + path, { ...opts, headers, credentials: 'same-origin' });
       const data = await res.json().catch(() => ({}));
@@ -691,6 +693,7 @@
       msg.className = 'alert'; msg.style.display = 'none';
       try {
         const d = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: $('#lu').value, password: $('#lp').value }) });
+        if (d.token) { token = d.token; localStorage.setItem('ip_token', token); }
         currentUser = { username: d.username || $('#lu').value.trim(), role: d.role || 'admin' };
         if (d.must_change_password) renderChangePw();
         else if (!d.setup_completed) renderSetup();
@@ -831,7 +834,7 @@
     const accountArea = $('#accountArea');
     $('#accountBtn').onclick = (e) => { e.stopPropagation(); accountArea.classList.toggle('open'); };
     document.addEventListener('click', (e) => { if (!accountArea.contains(e.target)) accountArea.classList.remove('open'); });
-    $('#signOutBtn').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); if (ws) { ws.close(); ws = null; } renderLogin(); };
+    $('#signOutBtn').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); token = null; localStorage.removeItem('ip_token'); if (ws) { ws.close(); ws = null; } renderLogin(); };
     $('#accountSettingsBtn').onclick = () => openAccountSettings();
     $('#accountPolicyBtn').onclick = () => openPolicyMenu();
 
@@ -1346,14 +1349,25 @@
         return;
       }
       const installed = items.filter(m => m.installed).length;
-      let html = `<div class="marketplace-header fade-in"><span class="mh-count">${items.length} module${items.length !== 1 ? 's' : ''}</span>${installed ? `<span class="mh-count">${installed} installed</span>` : ''}</div>`;
+      const updates   = items.filter(m => m.update_available).length;
+      let html = `<div class="marketplace-header fade-in"><span class="mh-count">${items.length} module${items.length !== 1 ? 's' : ''}</span>
+        ${installed ? `<span class="mh-count">${installed} installed</span>` : ''}
+        ${updates   ? `<span class="mh-count" style="color:var(--amber)">${updates} update${updates !== 1 ? 's' : ''} available</span>` : ''}
+      </div>`;
       html += '<div class="marketplace-grid">';
       items.forEach(m => {
-        const btnClass = m.installed ? 'installed' : 'install';
-        const btnText  = m.installed ? '✓ Installed' : 'Install';
-        const btnAction = m.installed ? '' : `onclick="installMod('${esc(m.id)}',this)"`;
+        const hasUpdate = !!m.update_available;
+        const btnClass  = hasUpdate ? 'install' : (m.installed ? 'installed' : 'install');
+        const btnText   = hasUpdate ? '↻ Update' : (m.installed ? '✓ Installed' : 'Install');
+        const btnAction = (hasUpdate || !m.installed) ? `onclick="installMod('${esc(m.id)}',this,${hasUpdate})"` : '';
         const removeBtn = m.installed ? `<button class="mc-remove-btn" onclick="removeMod('${esc(m.id)}',this)">Remove</button>` : '';
-        html += `<div class="market-card"><div class="mc-top">${modIcon(m.id)}<div class="mc-meta"><div class="mc-name">${esc(m.name || m.id)}</div><div class="mc-version">v${esc(m.version || '?')}</div></div></div><div class="mc-body"><div class="mc-desc">${esc(m.description || 'No description available')}</div></div><div class="mc-footer"><div class="mc-author">${IC.user} ${esc(m.author || 'Unknown')}</div><div style="display:flex;align-items:center"><button class="mc-install-btn ${btnClass}" ${btnAction}>${btnText}</button>${removeBtn}</div></div></div>`;
+        const latest = m.latest_version || m.version || '?';
+        const versionLabel = hasUpdate ? `v${esc(m.installed_version || '?')} → v${esc(latest)}` : `v${esc(latest)}`;
+        html += `<div class="market-card">
+        <div class="mc-top">${modIcon(m.id)}<div class="mc-meta"><div class="mc-name">${esc(m.name || m.id)}</div><div class="mc-version">${versionLabel}</div></div></div>
+        <div class="mc-body"><div class="mc-desc">${esc(m.description || 'No description available')}</div></div>
+        <div class="mc-footer"><div class="mc-author">${IC.user} ${esc(m.author || 'Unknown')}</div><div style="display:flex;align-items:center"><button class="mc-install-btn ${btnClass}" ${btnAction}>${btnText}</button>${removeBtn}</div></div>
+      </div>`;
       });
       html += '</div>';
       $('#marketList').innerHTML = html;
@@ -1363,15 +1377,16 @@
     }
   }
 
-  async function installMod(id, btn) {
+  async function installMod(id, btn, isUpdate) {
     const prevDashSet = dashboardIdSet(modDash);
-    btn.disabled = true; btn.className = 'mc-install-btn installing'; btn.textContent = 'Installing…';
+    btn.disabled = true; btn.className = 'mc-install-btn installing';
+    btn.textContent = isUpdate ? 'Updating…' : 'Installing…';
     try {
       await api(`/api/repository/${encodeURIComponent(id)}/install`, { method: 'POST' });
       await refreshAfterRepositoryChange(prevDashSet);
     } catch (e) {
       btn.className = 'mc-install-btn failed'; btn.textContent = 'Failed';
-      setTimeout(() => { btn.className = 'mc-install-btn install'; btn.textContent = 'Install'; btn.disabled = false; }, 2500);
+      setTimeout(() => { btn.className = isUpdate ? 'mc-install-btn install' : 'mc-install-btn install'; btn.textContent = isUpdate ? '↻ Update' : 'Install'; btn.disabled = false; }, 2500);
     }
   }
 
@@ -1453,10 +1468,55 @@
 
   // ── Settings ──
   async function pgSettings(el) {
-    let webPort = '...', extPort = '...';
-    try { const cfg = await api('/api/config'); webPort = cfg?.web?.port || 3490; extPort = cfg?.extender?.port || (webPort + 1); } catch {}
+    const curTheme = localStorage.getItem('ip_theme') || 'default';
+    let webPort = '...', extPort = '...', autoUpdate = false;
+    try {
+      const cfg = await api('/api/config');
+      webPort = cfg?.web?.port || 3490;
+      extPort = cfg?.extender?.port || (webPort + 1);
+      autoUpdate = !!(cfg?.modules?.auto_update_on_restart);
+    } catch {}
     el.innerHTML = `<div class="page-header fade-in"><h2>Settings</h2><p>Server information and configuration</p></div>
     <div id="portBanner" class="alert" style="display:none;margin-bottom:12px;background:rgba(245,158,11,.08);color:var(--amber);border:1px solid rgba(245,158,11,.2);padding:9px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;font-family:var(--mono)"></div>
+    <div class="card"><h3>Color Theme</h3>
+      <div class="theme-grid" id="themeGrid">
+        ${THEMES.map(t => `<div class="theme-swatch ${t.id===curTheme?'active':''}" data-theme-id="${t.id}" onclick="selectTheme('${t.id}')">
+          <div class="swatch-dots">${t.colors.map(c => '<div class="dot" style="background:'+c+'"></div>').join('')}</div>
+          <div class="swatch-name">${t.name}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card"><h3>Module Updates</h3>
+      <div class="list-row" style="border:none;padding:0">
+        <div style="flex:1">
+          <div class="row-name">Auto-update modules on restart</div>
+          <div class="row-meta" style="font-family:var(--mono);font-size:10px;margin-top:2px">Checks repository versions at startup and downloads newer releases before module loading.</div>
+        </div>
+        <label class="toggle"><input id="cfgAutoUpdate" type="checkbox" ${autoUpdate ? 'checked' : ''}><span class="track"></span></label>
+      </div>
+      <div style="margin-top:10px"><button class="btn" onclick="saveAutoUpdateSetting()">Save</button></div>
+      <div id="autoUpdateMsg" class="msg" style="margin-top:8px"></div>
+    </div>
+    <div class="card"><h3>Backups &amp; Restore</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-weight:500;font-size:12px;margin-bottom:2px">Config Database</div>
+          <div style="color:var(--text-muted);font-size:10px;font-family:var(--mono);margin-bottom:8px">Export/import module config options and values.</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn" onclick="exportConfigDb()">Export</button>
+            <label class="btn" style="cursor:pointer">Import<input type="file" accept="application/json" onchange="importConfigDb(this)" style="display:none"></label>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:500;font-size:12px;margin-bottom:2px">Data Backup</div>
+          <div style="color:var(--text-muted);font-size:10px;font-family:var(--mono);margin-bottom:8px">Export/import module data backup tables.</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn" onclick="exportDataBackup()">Export</button>
+            <label class="btn" style="cursor:pointer">Import<input type="file" accept="application/json" onchange="importDataBackup(this)" style="display:none"></label>
+          </div>
+        </div>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card"><h3>Web Panel Port</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Port the web dashboard listens on. Requires restart.</p>
         <div style="display:flex;gap:8px;align-items:flex-end"><div class="field" style="flex:1;margin:0"><label>Port</label><input type="number" id="cfgWebPort" value="${webPort}" min="1024" max="65535"></div><button class="btn" onclick="savePorts()" style="padding:8px 12px;margin-bottom:1px">Save</button></div>
@@ -1466,35 +1526,46 @@
       </div>
     </div>
     <div id="portMsg" class="msg" style="margin-bottom:12px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="card"><h3>Configuration Database</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Export/import module config schema and values.</p>
-        <input type="file" id="configImportInput" accept="application/json" style="display:none">
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="exportConfigDatabase()">Export Config</button>
-          <button class="btn" onclick="triggerConfigImport()">Import Config</button>
-        </div>
-        <div id="configDbMsg" class="msg" style="margin-top:10px"></div>
-      </div>
-      <div class="card"><h3>Data Backups</h3><p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono)">Backup and restore module runtime data tables.</p>
-        <input type="file" id="dataImportInput" accept="application/json" style="display:none">
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="exportDataBackup()">Download Backup</button>
-          <button class="btn" onclick="triggerDataImport()">Load Backup</button>
-        </div>
-        <div id="dataBackupMsg" class="msg" style="margin-top:10px"></div>
-      </div>
-    </div>
     <div class="card"><h3>Server Info</h3><div id="serverInfo"><div class="spinner"></div></div></div>`;
-
-    const cfgIn = $('#configImportInput');
-    if (cfgIn) cfgIn.onchange = e => importConfigDatabaseFile(e.target.files?.[0]);
-    const dataIn = $('#dataImportInput');
-    if (dataIn) dataIn.onchange = e => importDataBackupFile(e.target.files?.[0]);
-
     try {
       const s = await api('/api/status');
       $('#serverInfo').innerHTML = `<div class="list-row"><div class="row-name">Java Version</div><div class="row-meta">${esc(s.java_version)}</div></div><div class="list-row"><div class="row-name">Operating System</div><div class="row-meta">${esc(s.os)}</div></div><div class="list-row"><div class="row-name">Uptime</div><div class="row-meta">${esc(s.uptime_formatted)}</div></div><div class="list-row"><div class="row-name">Players Online</div><div class="row-meta">${s.total_players}</div></div>`;
     } catch { $('#serverInfo').innerHTML = '<div style="color:var(--text-muted);font-family:var(--mono);font-size:11px">Failed to load</div>'; }
+  }
+
+  async function saveAutoUpdateSetting() {
+    const msg = $('#autoUpdateMsg'); if (!msg) return;
+    msg.className = 'msg'; msg.style.display = 'none';
+    try {
+      const cfg = await api('/api/config');
+      await api('/api/config', { method: 'PUT', body: JSON.stringify({ ...cfg, modules: { ...(cfg.modules || {}), auto_update_on_restart: !!$('#cfgAutoUpdate')?.checked } }) });
+      msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Saved';
+    } catch (e) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed'; }
+  }
+
+  async function exportConfigDb() {
+    const res = await fetch('/api/config/db/export', { credentials: 'same-origin' });
+    if (!res.ok) { alert('Failed to export config database'); return; }
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await res.blob()), download: 'ip-config-export.json' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  async function importConfigDb(input) {
+    const file = input?.files?.[0]; if (!file) return;
+    try { await api('/api/config/db/import', { method: 'POST', body: await file.text(), headers: { 'Content-Type': 'application/json' } }); alert('Config database imported successfully'); }
+    catch (e) { alert(e.error || 'Failed to import'); }
+    finally { input.value = ''; }
+  }
+  async function exportDataBackup() {
+    const res = await fetch('/api/config/data/export', { credentials: 'same-origin' });
+    if (!res.ok) { alert('Failed to export data backup'); return; }
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await res.blob()), download: 'ip-data-backup.json' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  async function importDataBackup(input) {
+    const file = input?.files?.[0]; if (!file) return;
+    try { await api('/api/config/data/import', { method: 'POST', body: await file.text(), headers: { 'Content-Type': 'application/json' } }); alert('Data backup imported successfully'); }
+    catch (e) { alert(e.error || 'Failed to import'); }
+    finally { input.value = ''; }
   }
   async function savePorts() {
     const webPort = parseInt($('#cfgWebPort')?.value);
@@ -1513,94 +1584,6 @@
   function selectTheme(id) {
     applyTheme(id);
     document.querySelectorAll('.theme-swatch').forEach(s => s.classList.toggle('active', s.dataset.themeId === id));
-  }
-
-  async function exportConfigDatabase() {
-    const msg = $('#configDbMsg'); if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
-    try {
-      const res = await fetch(API + '/api/config/db/export', { credentials: 'same-origin' });
-      if (!res.ok) throw await res.json().catch(() => ({ error: 'Export failed' }));
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'integritypolygon-config-export.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Config export downloaded.'; }
-    } catch (e) {
-      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to export config.'; }
-    }
-  }
-
-  function triggerConfigImport() {
-    const input = $('#configImportInput');
-    if (!input) return;
-    input.value = '';
-    input.click();
-  }
-
-  async function importConfigDatabaseFile(file) {
-    const msg = $('#configDbMsg');
-    if (!file) return;
-    if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
-    try {
-      const text = await file.text();
-      await api('/api/config/db/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: text
-      });
-      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Config database imported successfully.'; }
-    } catch (e) {
-      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to import config database.'; }
-    }
-  }
-
-  async function exportDataBackup() {
-    const msg = $('#dataBackupMsg'); if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
-    try {
-      const res = await fetch(API + '/api/config/data/export', { credentials: 'same-origin' });
-      if (!res.ok) throw await res.json().catch(() => ({ error: 'Backup export failed' }));
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'integritypolygon-data-backup.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Data backup downloaded.'; }
-    } catch (e) {
-      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to export backup.'; }
-    }
-  }
-
-  function triggerDataImport() {
-    const input = $('#dataImportInput');
-    if (!input) return;
-    input.value = '';
-    input.click();
-  }
-
-  async function importDataBackupFile(file) {
-    const msg = $('#dataBackupMsg');
-    if (!file) return;
-    if (msg) { msg.className = 'msg'; msg.style.display = 'none'; }
-    try {
-      const text = await file.text();
-      await api('/api/config/data/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: text
-      });
-      if (msg) { msg.className = 'msg ok'; msg.style.display = 'block'; msg.textContent = 'Data backup loaded successfully.'; }
-    } catch (e) {
-      if (msg) { msg.className = 'msg err'; msg.style.display = 'block'; msg.textContent = e.error || 'Failed to load backup.'; }
-    }
   }
 
   // ── Account Settings & Policy Modals ──
@@ -1699,7 +1682,7 @@
   function connectWs() {
     if (ws) { ws.close(); ws = null; }
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(proto + '//' + location.host + '/ws/live');
+    ws = new WebSocket(proto + '//' + location.host + '/ws/live' + (token ? '?token=' + encodeURIComponent(token) : ''));
     ws.onmessage = ev => {
       try {
         const msg = JSON.parse(ev.data);

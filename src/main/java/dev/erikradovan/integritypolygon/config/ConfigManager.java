@@ -210,6 +210,10 @@ public class ConfigManager {
         return getValue("modules.hot_reload").map(v -> Boolean.TRUE.equals(v)).orElse(true);
     }
 
+    public boolean isAutoUpdateOnRestartEnabled() {
+        return getValue("modules.auto_update_on_restart").map(v -> Boolean.TRUE.equals(v)).orElse(false);
+    }
+
     /**
      * Get the Velocity forwarding secret used for extender authentication.
      * <p>
@@ -373,6 +377,7 @@ public class ConfigManager {
 
                 Map<String, Object> modules = new LinkedHashMap<>();
                 modules.put("hot_reload", true);
+                modules.put("auto_update_on_restart", false);
                 modules.put("repository_url", "https://raw.githubusercontent.com/ErikRadoan/IntegrityPolygon-Modules/main/modules.json");
                 defaults.put("modules", modules);
 

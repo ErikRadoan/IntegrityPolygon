@@ -18,6 +18,7 @@ setup:
 
 modules:
   hot_reload: true
+  auto_update_on_restart: false
 
 # Extender TCP socket settings.
 # The extender socket lets Paper servers communicate with the proxy

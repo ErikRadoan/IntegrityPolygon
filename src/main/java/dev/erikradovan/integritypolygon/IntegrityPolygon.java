@@ -1,6 +1,10 @@
 package dev.erikradovan.integritypolygon;
 
 import com.google.inject.Inject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
@@ -24,8 +28,17 @@ import dev.erikradovan.integritypolygon.web.auth.SetupWizard;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.util.*;
+import java.util.jar.JarFile;
 
 /**
  * Main Velocity plugin entry point for IntegrityPolygon.
@@ -124,6 +137,10 @@ public class IntegrityPolygon {
 
         // If setup is complete, load modules and optionally start hot-reload watcher
         if (configManager.isSetupCompleted()) {
+            if (configManager.isAutoUpdateOnRestartEnabled()) {
+                runAutoUpdateOnRestart(modulesJarDir);
+            }
+
             moduleManager.loadAll();
 
             if (configManager.isHotReloadEnabled()) {
@@ -212,5 +229,163 @@ public class IntegrityPolygon {
                 logger.error("Failed to create directory: {}", dir, e);
             }
         }
+    }
+
+    private void runAutoUpdateOnRestart(Path modulesJarDir) {
+        try {
+            Map<String, String> installed = scanInstalledModuleVersions(modulesJarDir);
+            if (installed.isEmpty()) return;
+
+            String repositoryText = loadRepositoryIndexJson();
+            if (repositoryText == null || repositoryText.isBlank()) {
+                logger.warn("Auto-update enabled but repository index is unavailable");
+                return;
+            }
+
+            JsonArray modules = extractModulesArray(repositoryText);
+            String repositoryBase = deriveRepositoryBaseUrl(configManager.getRepositoryUrl());
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+            int updated = 0;
+
+            for (JsonElement element : modules) {
+                if (!element.isJsonObject()) continue;
+                JsonObject mod = element.getAsJsonObject();
+                String id = mod.has("id") ? mod.get("id").getAsString() : null;
+                if (id == null || !installed.containsKey(id)) continue;
+
+                String installedVersion = installed.get(id);
+                String latestVersion = mod.has("version") ? mod.get("version").getAsString() : "unknown";
+                if (!isUpdateAvailable(installedVersion, latestVersion)) continue;
+
+                String downloadUrl = resolveDownloadUrl(mod, id, repositoryBase);
+                if (downloadUrl.isBlank()) continue;
+
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(downloadUrl))
+                        .header("User-Agent", "IntegrityPolygon/2.0")
+                        .timeout(Duration.ofSeconds(20))
+                        .GET()
+                        .build();
+
+                HttpResponse<InputStream> res = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
+                if (res.statusCode() != 200) continue;
+
+                try (InputStream in = res.body()) {
+                    Files.copy(in, modulesJarDir.resolve(id + ".jar"), StandardCopyOption.REPLACE_EXISTING);
+                }
+                updated++;
+                logger.info("Auto-updated module '{}' from {} to {}", id, installedVersion, latestVersion);
+            }
+
+            if (updated > 0) {
+                logger.info("Auto-update on restart applied {} module update(s)", updated);
+            }
+        } catch (Exception e) {
+            logger.error("Failed during startup auto-update pass", e);
+        }
+    }
+
+    private Map<String, String> scanInstalledModuleVersions(Path modulesJarDir) {
+        Map<String, String> versions = new HashMap<>();
+        java.io.File[] jars = modulesJarDir.toFile().listFiles((d, name) -> name.endsWith(".jar"));
+        if (jars == null) return versions;
+
+        for (java.io.File jar : jars) {
+            try (JarFile jarFile = new JarFile(jar)) {
+                var entry = jarFile.getEntry("module.json");
+                if (entry == null) continue;
+
+                try (InputStream in = jarFile.getInputStream(entry)) {
+                    String json = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+                    if (obj.has("id")) {
+                        String id = obj.get("id").getAsString();
+                        String version = obj.has("version") ? obj.get("version").getAsString() : "unknown";
+                        versions.put(id, version);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return versions;
+    }
+
+    private String loadRepositoryIndexJson() {
+        String configured = configManager.getRepositoryUrl();
+        List<String> candidates = new ArrayList<>();
+        if (configured != null && !configured.isBlank()) {
+            candidates.add(configured);
+        }
+        candidates.add("https://raw.githubusercontent.com/ErikRadoan/IntegrityPolygon-Modules/main/modules.json");
+
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        for (String url : candidates) {
+            try {
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("User-Agent", "IntegrityPolygon/2.0")
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+                if (res.statusCode() == 200) return res.body();
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private JsonArray extractModulesArray(String jsonText) {
+        JsonElement root = JsonParser.parseString(jsonText);
+        if (root.isJsonArray()) return root.getAsJsonArray();
+        if (root.isJsonObject()) {
+            JsonObject obj = root.getAsJsonObject();
+            if (obj.has("modules") && obj.get("modules").isJsonArray()) return obj.getAsJsonArray("modules");
+            if (obj.has("data") && obj.get("data").isJsonArray()) return obj.getAsJsonArray("data");
+        }
+        return new JsonArray();
+    }
+
+    private String deriveRepositoryBaseUrl(String repositoryUrl) {
+        if (repositoryUrl == null || repositoryUrl.isBlank()) return "";
+        int slash = repositoryUrl.lastIndexOf('/');
+        return slash < 0 ? repositoryUrl : repositoryUrl.substring(0, slash);
+    }
+
+    private String resolveDownloadUrl(JsonObject mod, String moduleId, String repositoryBase) {
+        if (mod.has("download_url")) {
+            String existing = mod.get("download_url").getAsString();
+            if (existing != null && !existing.isBlank()) return existing;
+        }
+        if (repositoryBase == null || repositoryBase.isBlank()) return "";
+        return repositoryBase + "/modules/" + moduleId + ".jar";
+    }
+
+    private boolean isUpdateAvailable(String installedVersion, String latestVersion) {
+        if (installedVersion == null || latestVersion == null) return false;
+        String installed = installedVersion.trim();
+        String latest = latestVersion.trim();
+        if (installed.isBlank() || latest.isBlank()) return false;
+        if ("unknown".equalsIgnoreCase(installed) || "unknown".equalsIgnoreCase(latest)) {
+            return !installed.equalsIgnoreCase(latest);
+        }
+        if (installed.equalsIgnoreCase(latest)) return false;
+
+        String[] left = latest.replace('-', '.').replace('_', '.').split("\\.");
+        String[] right = installed.replace('-', '.').replace('_', '.').split("\\.");
+        int max = Math.max(left.length, right.length);
+        for (int i = 0; i < max; i++) {
+            String l = i < left.length ? left[i] : "0";
+            String r = i < right.length ? right[i] : "0";
+            if (l.chars().allMatch(Character::isDigit) && r.chars().allMatch(Character::isDigit)) {
+                int cmp = Integer.compare(Integer.parseInt(l), Integer.parseInt(r));
+                if (cmp != 0) return cmp > 0;
+            } else {
+                int cmp = l.compareToIgnoreCase(r);
+                if (cmp != 0) return cmp > 0;
+            }
+        }
+
+        return !latest.equalsIgnoreCase(installed);
     }
 }

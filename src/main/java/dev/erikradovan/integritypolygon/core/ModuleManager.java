@@ -3,6 +3,7 @@ package dev.erikradovan.integritypolygon.core;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.velocitypowered.api.event.EventManager;
+import dev.erikradovan.integritypolygon.config.ConfigManager;
 import dev.erikradovan.integritypolygon.api.Module;
 import dev.erikradovan.integritypolygon.api.ModuleDescriptor;
 import dev.erikradovan.integritypolygon.api.ServiceRegistry;
@@ -97,6 +98,11 @@ public class ModuleManager {
             DiscoveredModule disc = discovered.get(moduleId);
             if (disc == null) continue;
 
+            if (isModuleDisabled(moduleId)) {
+                logger.info("  - {} skipped (disabled)", moduleId);
+                continue;
+            }
+
             boolean depsOk = true;
             for (String dep : disc.descriptor.dependencies()) {
                 if (!loaded.contains(dep) && !loadedModules.containsKey(dep)) {
@@ -163,6 +169,10 @@ public class ModuleManager {
 
     public void loadModule(File jar) throws Exception {
         ModuleDescriptor descriptor = parseDescriptor(jar);
+        if (isModuleDisabled(descriptor.id())) {
+            logger.info("  - {} skipped (disabled)", descriptor.id());
+            return;
+        }
         loadModuleInternal(jar, descriptor);
         logger.info("  ✓ {} v{} loaded", descriptor.name(), descriptor.version());
     }
@@ -228,6 +238,23 @@ public class ModuleManager {
 
     public Path getModulesDir() {
         return modulesDir;
+    }
+
+    private boolean isModuleDisabled(String moduleId) {
+        Optional<ConfigManager> cfg = serviceRegistry.get(ConfigManager.class);
+        if (cfg.isEmpty()) return false;
+
+        Optional<Object> raw = cfg.get().getValue("modules.disabled");
+        if (raw.isEmpty() || !(raw.get() instanceof List<?> list)) {
+            return false;
+        }
+
+        for (Object item : list) {
+            if (moduleId.equalsIgnoreCase(String.valueOf(item))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ModuleDescriptor parseDescriptor(File jar) throws Exception {
